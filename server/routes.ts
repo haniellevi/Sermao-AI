@@ -453,13 +453,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Protected routes
-  app.get('/api/auth/user', isAuthenticated, (req: AuthRequest, res) => {
+  app.get('/api/auth/user', authenticateToken, (req: AuthRequest, res) => {
     const user = { ...req.user };
     delete user.password;
     res.json(user);
   });
 
-  app.get('/api/user/me', isAuthenticated, (req: AuthRequest, res) => {
+  app.get('/api/user/me', authenticateToken, (req: AuthRequest, res) => {
     const user = req.user!;
     res.json({
       id: user.id,
