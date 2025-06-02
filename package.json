@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.31.8",
     "@clerk/nextjs": "^6.20.2",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
