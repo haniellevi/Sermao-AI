@@ -82,8 +82,14 @@ const callGemini = async (prompt: string, isLongForm = false): Promise<string> =
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini AI error:', error);
+    
+    // Check if it's a quota exceeded error
+    if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('Too Many Requests')) {
+      throw new Error('Limite de uso da IA atingido. Uma nova chave de API é necessária para continuar gerando sermões.');
+    }
+    
     throw new Error('Falha na comunicação com a IA');
   }
 };
