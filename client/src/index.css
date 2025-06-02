@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 17% 98%; /* #f8fafc */
+  --foreground: 222 84% 5%; /* #0f172a */
+  --muted: 210 40% 98%; /* #f1f5f9 */
+  --muted-foreground: 215 16% 47%; /* #64748b */
+  --popover: 0 0% 100%; /* #ffffff */
+  --popover-foreground: 222 84% 5%; /* #0f172a */
+  --card: 0 0% 100%; /* #ffffff */
+  --card-foreground: 222 84% 5%; /* #0f172a */
+  --border: 214 32% 91%; /* #e2e8f0 */
+  --input: 214 32% 91%; /* #e2e8f0 */
+  --primary: 221 83% 53%; /* #2563eb */
+  --primary-foreground: 210 40% 98%; /* #f1f5f9 */
+  --secondary: 271 91% 65%; /* #8b5cf6 */
+  --secondary-foreground: 210 40% 98%; /* #f1f5f9 */
+  --accent: 210 40% 96%; /* #f1f5f9 */
+  --accent-foreground: 222 84% 5%; /* #0f172a */
+  --destructive: 0 84% 60%; /* #ef4444 */
+  --destructive-foreground: 210 40% 98%; /* #f1f5f9 */
+  --ring: 221 83% 53%; /* #2563eb */
+  --radius: 0.5rem;
+  --chart-1: 221 83% 53%; /* #2563eb */
+  --chart-2: 271 91% 65%; /* #8b5cf6 */
+  --chart-3: 142 76% 36%; /* #059669 */
+  --chart-4: 43 96% 56%; /* #eab308 */
+  --chart-5: 27 96% 61%; /* #f97316 */
+}
+
+.dark {
+  --background: 222 84% 5%; /* #0f172a */
+  --foreground: 210 40% 98%; /* #f1f5f9 */
+  --muted: 217 33% 17%; /* #1e293b */
+  --muted-foreground: 215 20% 65%; /* #94a3b8 */
+  --popover: 222 84% 5%; /* #0f172a */
+  --popover-foreground: 210 40% 98%; /* #f1f5f9 */
+  --card: 222 84% 5%; /* #0f172a */
+  --card-foreground: 210 40% 98%; /* #f1f5f9 */
+  --border: 217 33% 17%; /* #1e293b */
+  --input: 217 33% 17%; /* #1e293b */
+  --primary: 221 83% 53%; /* #2563eb */
+  --primary-foreground: 210 40% 98%; /* #f1f5f9 */
+  --secondary: 271 91% 65%; /* #8b5cf6 */
+  --secondary-foreground: 210 40% 98%; /* #f1f5f9 */
+  --accent: 217 33% 17%; /* #1e293b */
+  --accent-foreground: 210 40% 98%; /* #f1f5f9 */
+  --destructive: 0 63% 31%; /* #dc2626 */
+  --destructive-foreground: 210 40% 98%; /* #f1f5f9 */
+  --ring: 221 83% 53%; /* #2563eb */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom animations for religious context */
+@keyframes gentle-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-gentle-fade {
+  animation: gentle-fade 0.5s ease-out;
+}
+
+/* Religious accent colors */
+.text-spiritual {
+  color: hsl(var(--primary));
+}
+
+.text-sacred {
+  color: hsl(var(--secondary));
+}
+
+.bg-spiritual {
+  background-color: hsl(var(--primary));
+}
+
+.bg-sacred {
+  background-color: hsl(var(--secondary));
+}
+
+/* Sermon content styling */
+.sermon-content {
+  @apply prose prose-lg max-w-none;
+}
+
+.sermon-content h1 {
+  @apply text-3xl font-bold text-foreground mb-6;
+}
+
+.sermon-content h2 {
+  @apply text-xl font-semibold text-foreground mt-8 mb-4;
+}
+
+.sermon-content h3 {
+  @apply text-lg font-medium text-foreground mt-6 mb-3;
+}
+
+.sermon-content p {
+  @apply text-foreground leading-relaxed mb-4;
+}
+
+.sermon-content blockquote {
+  @apply border-l-4 border-primary bg-primary/5 pl-6 py-4 my-6 italic;
+}
+
+.sermon-content strong {
+  @apply font-semibold text-foreground;
+}
+
+.sermon-content em {
+  @apply italic text-muted-foreground;
+}
+
+.sermon-content ul {
+  @apply list-disc list-inside space-y-2 mb-4;
+}
+
+.sermon-content ol {
+  @apply list-decimal list-inside space-y-2 mb-4;
+}

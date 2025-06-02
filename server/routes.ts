@@ -1,0 +1,577 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import multer from "multer";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import PDFParse from "pdf-parse";
+import mammoth from "mammoth";
+import { storage } from "./storage";
+import { 
+  loginSchema, 
+  insertUserSchema, 
+  passwordResetRequestSchema,
+  passwordResetConfirmSchema,
+  generateSermonSchema,
+  createDnaSchema,
+  type User 
+} from "@shared/schema";
+
+const JWT_SECRET = process.env.JWT_SECRET || "your-jwt-secret-key";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || "";
+
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.'));
+    }
+  }
+});
+
+// JWT middleware
+interface AuthRequest extends Express.Request {
+  user?: User;
+}
+
+const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const user = await storage.getUser(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid or expired token' });
+  }
+};
+
+// Helper functions
+const generateToken = (userId: number): string => {
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
+};
+
+const hashPassword = async (password: string): Promise<string> => {
+  return bcrypt.hash(password, 10);
+};
+
+const comparePassword = async (password: string, hash: string): Promise<boolean> => {
+  return bcrypt.compare(password, hash);
+};
+
+// AI Service functions
+const callGemini = async (prompt: string, format_response_as_json = false): Promise<any> => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    const fullPrompt = format_response_as_json 
+      ? `${prompt}\n\nResponda APENAS com um JSON válido, sem texto adicional.`
+      : prompt;
+
+    const result = await model.generateContent(fullPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (format_response_as_json) {
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('Failed to parse JSON response:', e);
+        throw new Error('Invalid JSON response from AI');
+      }
+    }
+
+    return text;
+  } catch (error) {
+    console.error('Gemini AI error:', error);
+    throw new Error('Failed to generate content with AI');
+  }
+};
+
+const processFileContent = async (file: Express.Multer.File): Promise<string> => {
+  try {
+    if (file.mimetype === 'application/pdf') {
+      const pdfData = await PDFParse(file.buffer);
+      return pdfData.text;
+    } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const result = await mammoth.extractRawText({ buffer: file.buffer });
+      return result.value;
+    } else if (file.mimetype === 'text/plain') {
+      return file.buffer.toString('utf-8');
+    }
+    return '';
+  } catch (error) {
+    console.error('File processing error:', error);
+    return '';
+  }
+};
+
+const processDNA = async (userId: number, files: Express.Multer.File[], pastedTexts: string[], youtubeLinks: string[]): Promise<any> => {
+  let allContent = '';
+  
+  // Process uploaded files
+  const fileContents = await Promise.all(files.map(processFileContent));
+  allContent += fileContents.join('\n\n');
+  
+  // Add pasted texts
+  if (pastedTexts && pastedTexts.length > 0) {
+    allContent += '\n\n' + pastedTexts.filter(text => text.trim()).join('\n\n');
+  }
+
+  if (!allContent.trim()) {
+    throw new Error('No content provided for DNA analysis');
+  }
+
+  const dnaPrompt = `
+Você é um especialista em análise homilética e estilo pastoral. Analise o seguinte conteúdo de sermões/pregações e extraia o DNA único do pregador:
+
+CONTEÚDO DOS SERMÕES:
+${allContent}
+
+Com base nesta análise, crie um perfil completo do DNA do pregador em formato JSON com as seguintes características:
+
+{
+  "estilo_pregacao": "Descreva o estilo predominante (expositivo, temático, narrativo, etc.)",
+  "tom_predominante": "Tom emocional e pastoral (inspirador, confrontativo, pastoral, etc.)",
+  "estrutura_preferida": "Como o pregador organiza seus sermões",
+  "linguagem_caracteristica": "Tipo de linguagem usada (formal, coloquial, técnica, etc.)",
+  "temas_recorrentes": ["lista", "de", "temas", "favoritos"],
+  "uso_de_ilustracoes": "Como usa exemplos e ilustrações",
+  "aplicacao_pratica": "Como faz aplicações práticas",
+  "referencias_biblicas": "Padrão de uso de textos bíblicos",
+  "publico_alvo_preferido": "Tipo de audiência que mais se conecta",
+  "pontos_fortes": ["lista", "dos", "principais", "pontos", "fortes"],
+  "caracteristicas_unicas": "O que torna este pregador único"
+}
+`;
+
+  try {
+    const dnaResult = await callGemini(dnaPrompt, true);
+    return dnaResult;
+  } catch (error) {
+    console.error('DNA processing error:', error);
+    throw new Error('Failed to process DNA with AI');
+  }
+};
+
+const generateSermon = async (userId: number, dnaProfileId: number | null, parameters: any): Promise<any> => {
+  try {
+    // Get DNA profile
+    let dnaProfile = null;
+    if (dnaProfileId) {
+      dnaProfile = await storage.getDnaProfile(dnaProfileId);
+    }
+
+    const dnaDescription = dnaProfile && dnaProfile.type === "customizado" 
+      ? JSON.stringify(dnaProfile.customAttributes)
+      : "Estilo pastoral equilibrado, tom inspirador e acolhedor, estrutura com introdução, desenvolvimento em 3 pontos e conclusão prática, temas focados em graça, amor, esperança e transformação.";
+
+    const sermonPrompt = `
+Você é um pastor experiente e especialista em homilética. Crie um sermão completo e impactante baseado nos seguintes parâmetros:
+
+DNA DO PREGADOR:
+${dnaDescription}
+
+PARÂMETROS DO SERMÃO:
+- Tema: ${parameters.theme || "Livre escolha bíblica"}
+- Propósito: ${parameters.purpose || "Inspirar e edificar"}
+- Público-alvo: ${parameters.audience || "Congregação geral"}
+- Duração: ${parameters.duration || "30-45 minutos"}
+- Estilo: ${parameters.style || "Conforme DNA do pregador"}
+- Contexto: ${parameters.context || "Culto regular"}
+${parameters.referenceUrls ? `- URLs de referência: ${parameters.referenceUrls}` : ""}
+
+INSTRUÇÕES:
+1. Crie um sermão autêntico que reflita o DNA do pregador
+2. Use uma estrutura clara e envolvente
+3. Inclua introdução cativante, desenvolvimento sólido e conclusão prática
+4. Use linguagem apropriada para o público-alvo
+5. Incorpore aplicações práticas relevantes
+6. Mantenha fidelidade bíblica
+
+Responda em formato JSON:
+{
+  "titulo": "Título impactante do sermão",
+  "texto_base": "Referência bíblica principal",
+  "introducao": "Introdução envolvente que conecta com a audiência",
+  "desenvolvimento": [
+    {
+      "ponto": "Primeiro ponto principal",
+      "conteudo": "Desenvolvimento detalhado do primeiro ponto"
+    },
+    {
+      "ponto": "Segundo ponto principal", 
+      "conteudo": "Desenvolvimento detalhado do segundo ponto"
+    },
+    {
+      "ponto": "Terceiro ponto principal",
+      "conteudo": "Desenvolvimento detalhado do terceiro ponto"
+    }
+  ],
+  "aplicacao_pratica": "Como aplicar os ensinamentos na vida cotidiana",
+  "conclusao": "Conclusão motivadora e desafiadora",
+  "oracao_final": "Sugestão de oração para encerrar",
+  "qualidade_score": 85,
+  "sugestoes_enriquecimento": [
+    "Sugestão 1 para melhorar o sermão",
+    "Sugestão 2 para melhorar o sermão", 
+    "Sugestão 3 para melhorar o sermão"
+  ],
+  "justificativa_qualidade": "Explicação da pontuação de qualidade"
+}
+`;
+
+    return await callGemini(sermonPrompt, true);
+  } catch (error) {
+    console.error('Sermon generation error:', error);
+    throw new Error('Failed to generate sermon with AI');
+  }
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const validatedData = insertUserSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(validatedData.email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists with this email' });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(validatedData.password);
+      
+      // Create user (this also creates default DNA profile)
+      const user = await storage.createUser({
+        ...validatedData,
+        password: hashedPassword,
+      });
+
+      // Generate token
+      const token = generateToken(user.id);
+
+      res.status(201).json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          activeDnaProfileId: user.activeDnaProfileId,
+        },
+        token,
+      });
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      res.status(400).json({ message: error.message || 'Registration failed' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      
+      // Find user
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Check password
+      const isValidPassword = await comparePassword(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Generate token
+      const token = generateToken(user.id);
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          activeDnaProfileId: user.activeDnaProfileId,
+        },
+        token,
+      });
+    } catch (error: any) {
+      console.error('Login error:', error);
+      res.status(400).json({ message: error.message || 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', authenticateToken, (req, res) => {
+    res.json({ message: 'Logged out successfully' });
+  });
+
+  app.post('/api/auth/reset-password/request', async (req, res) => {
+    try {
+      const { email } = passwordResetRequestSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists for security
+        return res.json({ message: 'If an account with this email exists, a reset link has been sent.' });
+      }
+
+      // Generate reset token
+      const resetToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token: resetToken,
+        expiresAt,
+      });
+
+      // In a real app, send email here
+      console.log(`Password reset token for ${email}: ${resetToken}`);
+
+      res.json({ message: 'If an account with this email exists, a reset link has been sent.' });
+    } catch (error: any) {
+      console.error('Password reset request error:', error);
+      res.status(400).json({ message: error.message || 'Failed to process password reset request' });
+    }
+  });
+
+  app.post('/api/auth/reset-password/confirm', async (req, res) => {
+    try {
+      const { token, password } = passwordResetConfirmSchema.parse(req.body);
+      
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
+        return res.status(400).json({ message: 'Invalid or expired reset token' });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(password);
+      
+      // Update user password
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      
+      // Mark token as used
+      await storage.markPasswordResetTokenUsed(resetToken.id);
+
+      res.json({ message: 'Password reset successfully' });
+    } catch (error: any) {
+      console.error('Password reset confirm error:', error);
+      res.status(400).json({ message: error.message || 'Failed to reset password' });
+    }
+  });
+
+  // Protected routes
+  app.get('/api/user/me', authenticateToken, (req: AuthRequest, res) => {
+    const user = req.user!;
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      activeDnaProfileId: user.activeDnaProfileId,
+    });
+  });
+
+  app.get('/api/user/dna', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const dnaProfiles = await storage.getDnaProfilesByUserId(userId);
+      const activeDnaProfile = await storage.getActiveDnaProfile(userId);
+
+      res.json({
+        profiles: dnaProfiles,
+        activeProfile: activeDnaProfile,
+        hasCustomDNA: dnaProfiles.some(profile => profile.type === "customizado"),
+      });
+    } catch (error: any) {
+      console.error('Get DNA error:', error);
+      res.status(500).json({ message: 'Failed to retrieve DNA profiles' });
+    }
+  });
+
+  app.post('/api/user/dna', authenticateToken, upload.array('files', 5), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const files = req.files as Express.Multer.File[] || [];
+      
+      // Parse JSON fields from form data
+      const pastedTexts = req.body.pastedTexts ? JSON.parse(req.body.pastedTexts) : [];
+      const youtubeLinks = req.body.youtubeLinks ? JSON.parse(req.body.youtubeLinks) : [];
+
+      // Validate input
+      const validatedData = createDnaSchema.parse({
+        uploadedFiles: files.map(f => ({ name: f.originalname, content: '', type: f.mimetype })),
+        pastedTexts: pastedTexts.filter((text: string) => text && text.trim()),
+        youtubeLinks: youtubeLinks.filter((link: string) => link && link.trim()),
+      });
+
+      // Process DNA with AI
+      const customAttributes = await processDNA(
+        userId, 
+        files, 
+        validatedData.pastedTexts || [], 
+        validatedData.youtubeLinks || []
+      );
+
+      // Check if user already has a custom DNA profile
+      const existingProfiles = await storage.getDnaProfilesByUserId(userId);
+      const existingCustomProfile = existingProfiles.find(profile => profile.type === "customizado");
+
+      let dnaProfile;
+      if (existingCustomProfile) {
+        // Update existing custom profile
+        dnaProfile = await storage.updateDnaProfile(existingCustomProfile.id, {
+          customAttributes,
+          uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
+          pastedTexts: validatedData.pastedTexts,
+          youtubeLinks: validatedData.youtubeLinks,
+        });
+      } else {
+        // Create new custom profile
+        dnaProfile = await storage.createDnaProfile({
+          userId,
+          type: "customizado",
+          customAttributes,
+          uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
+          pastedTexts: validatedData.pastedTexts,
+          youtubeLinks: validatedData.youtubeLinks,
+        });
+      }
+
+      // Set as active DNA profile
+      await storage.updateUser(userId, { activeDnaProfileId: dnaProfile!.id });
+
+      res.json({
+        message: 'DNA profile created/updated successfully',
+        dnaProfile,
+      });
+    } catch (error: any) {
+      console.error('DNA creation error:', error);
+      res.status(400).json({ message: error.message || 'Failed to create DNA profile' });
+    }
+  });
+
+  app.post('/api/user/dna/set-active', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { dnaProfileId } = req.body;
+
+      // Verify the DNA profile belongs to the user
+      const dnaProfile = await storage.getDnaProfile(dnaProfileId);
+      if (!dnaProfile || dnaProfile.userId !== userId) {
+        return res.status(404).json({ message: 'DNA profile not found' });
+      }
+
+      await storage.updateUser(userId, { activeDnaProfileId: dnaProfileId });
+
+      res.json({ message: 'Active DNA profile updated successfully' });
+    } catch (error: any) {
+      console.error('Set active DNA error:', error);
+      res.status(500).json({ message: 'Failed to update active DNA profile' });
+    }
+  });
+
+  app.post('/api/sermon/generate', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const parameters = generateSermonSchema.parse(req.body);
+
+      // Get DNA profile based on selection
+      let dnaProfileId = null;
+      if (parameters.dnaType === "customizado") {
+        const activeDnaProfile = await storage.getActiveDnaProfile(userId);
+        if (activeDnaProfile && activeDnaProfile.type === "customizado") {
+          dnaProfileId = activeDnaProfile.id;
+        }
+      }
+
+      // Generate sermon with AI
+      const sermonData = await generateSermon(userId, dnaProfileId, parameters);
+
+      // Save sermon to database
+      const sermon = await storage.createSermon({
+        userId,
+        dnaProfileId,
+        title: sermonData.titulo,
+        content: JSON.stringify(sermonData),
+        parameters: parameters,
+        qualityScore: sermonData.qualidade_score,
+        suggestions: sermonData.sugestoes_enriquecimento,
+      });
+
+      res.json({
+        sermon: sermonData,
+        sermonId: sermon.id,
+      });
+    } catch (error: any) {
+      console.error('Sermon generation error:', error);
+      res.status(400).json({ message: error.message || 'Failed to generate sermon' });
+    }
+  });
+
+  app.get('/api/sermons', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sermons = await storage.getSermonsByUserId(userId);
+
+      res.json({
+        sermons: sermons.map(sermon => ({
+          id: sermon.id,
+          title: sermon.title,
+          qualityScore: sermon.qualityScore,
+          createdAt: sermon.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error('Get sermons error:', error);
+      res.status(500).json({ message: 'Failed to retrieve sermons' });
+    }
+  });
+
+  app.get('/api/sermons/:id', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sermonId = parseInt(req.params.id);
+
+      const sermon = await storage.getSermon(sermonId);
+      if (!sermon || sermon.userId !== userId) {
+        return res.status(404).json({ message: 'Sermon not found' });
+      }
+
+      res.json({
+        sermon: {
+          id: sermon.id,
+          title: sermon.title,
+          content: JSON.parse(sermon.content),
+          qualityScore: sermon.qualityScore,
+          suggestions: sermon.suggestions,
+          createdAt: sermon.createdAt,
+        },
+      });
+    } catch (error: any) {
+      console.error('Get sermon error:', error);
+      res.status(500).json({ message: 'Failed to retrieve sermon' });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
