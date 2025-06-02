@@ -21,6 +21,7 @@ import { SermonLoading } from "@/components/ui/sermon-loading";
 export default function GenerateSermonPage() {
   const [, setLocation] = useLocation();
   const [showLoading, setShowLoading] = useState(false);
+  const [loadingStartTime, setLoadingStartTime] = useState(Date.now());
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -71,6 +72,7 @@ export default function GenerateSermonPage() {
       });
     },
     onMutate: () => {
+      setLoadingStartTime(Date.now());
       setShowLoading(true);
     },
     onSettled: () => {
@@ -90,7 +92,11 @@ export default function GenerateSermonPage() {
 
   return (
     <>
-      <SermonLoading isVisible={showLoading} />
+      <SermonLoading 
+        isVisible={showLoading} 
+        startTime={loadingStartTime}
+        estimatedDuration={25000}
+      />
       <div className="min-h-screen bg-slate-50">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
