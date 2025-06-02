@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Navbar } from "@/components/layout/navbar";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Dna, Settings, Wand2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ export default function GenerateSermonPage() {
   const [loadingStartTime, setLoadingStartTime] = useState(Date.now());
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: dnaData } = useQuery({
     queryKey: ["/api/user/dna"],
@@ -58,11 +59,15 @@ export default function GenerateSermonPage() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Invalidate sermons cache to update the list
+      queryClient.invalidateQueries({ queryKey: ['/api/sermons'] });
+      
       toast({
         title: "Sermão gerado com sucesso!",
         description: "Seu sermão personalizado está pronto.",
       });
-      setLocation(`/sermon-result/${data.sermonId}`);
+      console.log('Resposta da API:', data);
+      setLocation(`/sermon-result?id=${data.sermonId}`);
     },
     onError: (error: any) => {
       toast({
