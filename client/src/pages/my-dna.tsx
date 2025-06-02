@@ -148,18 +148,34 @@ export default function MyDNAPage() {
   };
 
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-gray-600">Faça login para acessar seu DNA de pregação.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-
       <div className="container mx-auto px-4 py-8">
-        {/* Status Section */}
-        <Card className="shadow-lg mb-8">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Meu DNA de Pregação</h1>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Analise seus sermões e pregações para criar um perfil personalizado que será usado na geração de conteúdo.
+            </p>
+          </div>
+
+          {/* Status Card */}
+          <Card className="shadow-lg">
+            <CardContent className="p-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Status do seu DNA</h2>
                 {isLoading ? (
@@ -173,310 +189,260 @@ export default function MyDNAPage() {
                     <span>Seu DNA customizado já está definido</span>
                   </div>
                 ) : (
-                  <div className="flex items-center text-yellow-600">
+                  <div className="flex items-center text-amber-600">
                     <AlertTriangle className="w-5 h-5 mr-2" />
-                    <span>Você ainda não tem um DNA customizado</span>
+                    <span>DNA padrão ativo - Configure seu DNA personalizado</span>
                   </div>
                 )}
               </div>
-              {dnaData?.activeProfile && (
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Última atualização</div>
-                  <div className="text-lg font-semibold text-gray-900">
-                    {new Date(dnaData.activeProfile.createdAt).toLocaleDateString('pt-BR')}
+
+              <div className="mt-6">
+                {!showForm ? (
+                  <div className="space-y-4">
+                    <p className="text-gray-600">
+                      {dnaData?.hasCustomDNA 
+                        ? "Você já possui um DNA personalizado. Clique abaixo para visualizar ou atualizar."
+                        : "Crie seu DNA personalizado fazendo upload de sermões, colando textos ou adicionando links do YouTube."
+                      }
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        if (dnaData?.hasCustomDNA) {
+                          loadExistingData();
+                        }
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      {dnaData?.hasCustomDNA ? "Atualizar DNA" : "Criar DNA Personalizado"}
+                    </Button>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-4">
-              {!dnaData?.hasCustomDNA ? (
-                <Button 
-                  onClick={() => setShowForm(true)}
-                  className="bg-secondary hover:bg-secondary/90"
-                >
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Gerar Meu DNA
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => setShowForm(true)}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Atualizar Meu DNA
-                </Button>
-              )}
-              <Button variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Exportar DNA
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* DNA Form */}
-        {showForm && (
-          <Card className="shadow-lg mb-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-semibold">Configurar DNA Personalizado</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowForm(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                ) : null}
               </div>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                {/* File Upload Section */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <Upload className="w-5 h-5 text-primary mr-2" />
-                    Upload de Sermões (até 5 arquivos)
-                  </h4>
-                  <FileUpload
-                    onFilesChange={setUploadedFiles}
-                    files={uploadedFiles}
-                    maxFiles={5}
-                    acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']}
-                  />
-                </div>
+            </CardContent>
+          </Card>
 
-                {/* Text Input Section */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <FileText className="w-5 h-5 text-secondary mr-2" />
-                    Pregações em Texto (até 5)
-                  </h4>
-                  <div className="space-y-4">
-                    {[0, 1, 2, 3, 4].map((index) => (
-                      <div key={index}>
-                        <Label htmlFor={`text-${index}`} className="text-sm font-medium text-gray-700">
-                          Pregação {index + 1}
-                        </Label>
-                        <Textarea
-                          id={`text-${index}`}
-                          rows={4}
-                          placeholder="Cole aqui o texto completo de uma pregação sua..."
-                          {...register(`pastedTexts.${index}` as const)}
-                          className="mt-1"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* YouTube Links Section */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <Youtube className="w-5 h-5 text-red-600 mr-2" />
-                    Links do YouTube (até 3)
-                  </h4>
-                  <div className="space-y-4">
-                    {[0, 1, 2].map((index) => (
-                      <div key={index}>
-                        <Label htmlFor={`youtube-${index}`} className="text-sm font-medium text-gray-700">
-                          Link {index + 1}
-                        </Label>
-                        <Input
-                          id={`youtube-${index}`}
-                          type="url"
-                          placeholder="https://youtube.com/watch?v=..."
-                          {...register(`youtubeLinks.${index}` as const)}
-                          className="mt-1"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Personal Description Section */}
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                    <Edit className="w-5 h-5 text-blue-600 mr-2" />
-                    Eu gosto de pregar assim
-                  </h4>
+          {/* DNA Creation Form */}
+          {showForm && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Upload className="w-5 h-5 mr-2" />
+                  {dnaData?.hasCustomDNA ? "Atualizar" : "Criar"} DNA Personalizado
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                  {/* File Upload Section */}
                   <div>
-                    <Label htmlFor="personal-description" className="text-sm font-medium text-gray-700">
-                      Descreva com suas palavras quem é você como pregador, e como você gosta de ministrar a Palavra
-                    </Label>
-                    <Textarea
-                      id="personal-description"
-                      rows={6}
-                      placeholder="Ex: Sou um pregador expositivo que gosta de conectar as Escrituras com situações práticas do dia a dia. Prefiro usar ilustrações simples e histórias pessoais para tornar a mensagem mais acessível. Meu estilo é conversacional e procuro sempre aplicar a Palavra de forma prática na vida dos ouvintes..."
-                      {...register('personalDescription')}
-                      className="mt-1"
+                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                      <Upload className="w-5 h-5 text-primary mr-2" />
+                      Upload de Sermões (até 5 arquivos)
+                    </h4>
+                    <FileUpload
+                      onFilesChange={setUploadedFiles}
+                      files={uploadedFiles}
+                      maxFiles={5}
+                      acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']}
                     />
                   </div>
-                </div>
 
-                {/* Submit Button */}
-                <div className="flex justify-between items-center pt-6 border-t">
-                  <Button 
-                    type="button" 
-                    variant="ghost"
-                    onClick={() => setShowForm(false)}
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancelar
-                  </Button>
+                  {/* Text Input Section */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                      <FileText className="w-5 h-5 text-secondary mr-2" />
+                      Pregações em Texto (até 5)
+                    </h4>
+                    <div className="space-y-4">
+                      {[0, 1, 2, 3, 4].map((index) => (
+                        <div key={index}>
+                          <Label htmlFor={`text-${index}`} className="text-sm font-medium text-gray-700">
+                            Pregação {index + 1}
+                          </Label>
+                          <Textarea
+                            id={`text-${index}`}
+                            rows={4}
+                            placeholder="Cole aqui o texto completo de uma pregação sua..."
+                            {...register(`pastedTexts.${index}` as const)}
+                            className="mt-1"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* YouTube Links Section */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                      <Youtube className="w-5 h-5 text-red-600 mr-2" />
+                      Links do YouTube (até 3)
+                    </h4>
+                    <div className="space-y-4">
+                      {[0, 1, 2].map((index) => (
+                        <div key={index}>
+                          <Label htmlFor={`youtube-${index}`} className="text-sm font-medium text-gray-700">
+                            Link {index + 1}
+                          </Label>
+                          <Input
+                            id={`youtube-${index}`}
+                            type="url"
+                            placeholder="https://youtube.com/watch?v=..."
+                            {...register(`youtubeLinks.${index}` as const)}
+                            className="mt-1"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Personal Description Section */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                      <Edit className="w-5 h-5 text-blue-600 mr-2" />
+                      Eu gosto de pregar assim
+                    </h4>
+                    <div>
+                      <Label htmlFor="personal-description" className="text-sm font-medium text-gray-700">
+                        Descreva com suas palavras quem é você como pregador, e como você gosta de ministrar a Palavra
+                      </Label>
+                      <Textarea
+                        id="personal-description"
+                        rows={6}
+                        placeholder="Ex: Sou um pregador expositivo que gosta de conectar as Escrituras com situações práticas do dia a dia. Prefiro usar ilustrações simples e histórias pessoais para tornar a mensagem mais acessível. Meu estilo é conversacional e procuro sempre aplicar a Palavra de forma prática na vida dos ouvintes..."
+                        {...register('personalDescription')}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-between items-center pt-6 border-t">
+                    <Button 
+                      type="button" 
+                      variant="ghost"
+                      onClick={() => setShowForm(false)}
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createDnaMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {createDnaMutation.isPending ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                          Analisando com IA...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="w-4 h-4 mr-2" />
+                          Analisar e Salvar DNA
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Current DNA Preview */}
+          {dnaData?.activeProfile && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <Dna className="w-5 h-5 mr-2" />
+                    Seu Perfil de Pregação
+                  </CardTitle>
                   <Button
-                    type="submit"
-                    disabled={createDnaMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      setShowForm(true);
+                      loadExistingData();
+                    }}
+                    variant="outline"
+                    size="sm"
                   >
-                    {createDnaMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                        Analisando com IA...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-4 h-4 mr-2" />
-                        Analisar e Salvar DNA
-                      </>
-                    )}
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Atualizar DNA
                   </Button>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Current DNA Preview */}
-        {dnaData?.activeProfile && (
-          <Card className="shadow-lg">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center">
-                  <Dna className="w-5 h-5 mr-2" />
-                  Seu Perfil de Pregação
-                </CardTitle>
-                <Button
-                  onClick={() => {
-                    setShowForm(true);
-                    loadExistingData();
-                  }}
-                  variant="outline"
-                  size="sm"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Atualizar DNA
-                </Button>
-              </div>
-              <p className="text-sm text-gray-600 mt-2">
-                Este é seu perfil personalizado identificado pela análise de IA. Ele é usado automaticamente na geração de seus sermões.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gray-50 rounded-lg p-6">
-                {dnaData.activeProfile.type === "customizado" && dnaData.activeProfile.customAttributes ? (
-                  <div className="space-y-8">
-                    {/* Linguagem Verbal */}
-                    {dnaData.activeProfile.customAttributes.linguagemVerbal && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Linguagem Verbal</h3>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Formalidade</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linguagemVerbal.formalidade || "Não identificado"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Vocabulário</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linguagemVerbal.vocabulario || "Não identificado"}</p>
-                          </div>
-                          <div className="md:col-span-2">
-                            <h4 className="font-medium text-gray-900 mb-1">Palavras-chave e Frases de Efeito</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linguagemVerbal.palavrasChaveFrasesEfeito || "Não identificado"}</p>
-                          </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Este é seu perfil personalizado identificado pela análise de IA. Ele é usado automaticamente na geração de seus sermões.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 rounded-lg p-6">
+                  {dnaData.activeProfile.type === "customizado" && dnaData.activeProfile.customAttributes ? (
+                    <div className="space-y-6">
+                      {/* Características principais */}
+                      {dnaData.activeProfile.customAttributes.teologia && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                            Abordagem Teológica
+                          </h3>
+                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.teologia}</p>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Tom e Comunicação */}
-                    {dnaData.activeProfile.customAttributes.tomEComunicacao && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Tom e Comunicação</h3>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Tom Geral</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.tomEComunicacao.tomGeral || "Não identificado"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Paixão e Intensidade</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.tomEComunicacao.nivelPaixaoIntensidade || "Não identificado"}</p>
-                          </div>
+                      {dnaData.activeProfile.customAttributes.estilo && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                            Estilo de Pregação
+                          </h3>
+                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.estilo}</p>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Estrutura e Estilo Homilético */}
-                    {dnaData.activeProfile.customAttributes.estruturaESiloHomiletico && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Estrutura e Estilo Homilético</h3>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Estilo Principal</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.estruturaESiloHomiletico.estiloPrincipal || "Não identificado"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Introdução</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.estruturaESiloHomiletico.introducao || "Não identificado"}</p>
-                          </div>
-                          <div className="md:col-span-2">
-                            <h4 className="font-medium text-gray-900 mb-1">Uso de Ilustrações</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.estruturaESiloHomiletico.usoIlustracoesAnalogias || "Não identificado"}</p>
-                          </div>
+                      {dnaData.activeProfile.customAttributes.audiencia && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                            <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                            Conexão com a Audiência
+                          </h3>
+                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.audiencia}</p>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Linha Teológica */}
-                    {dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Linha Teológica e Interpretativa</h3>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Visão Geral</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa.visaoGeral || "Não identificado"}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Abordagem Hermenêutica</h4>
-                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa.abordagemHermeneutica || "Não identificado"}</p>
-                          </div>
+                      {dnaData.activeProfile.customAttributes.linguagem && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                            <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                            Linguagem e Comunicação
+                          </h3>
+                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.linguagem}</p>
                         </div>
+                      )}
+
+                      {dnaData.activeProfile.customAttributes.estrutura && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                            <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                            Estrutura e Organização
+                          </h3>
+                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.estrutura}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-gray-500 mb-4">
+                        <Dna className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Nenhuma característica identificada ainda.</p>
+                        <p className="text-sm mt-2">Adicione conteúdo para análise e clique em "Analisar e Salvar DNA".</p>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Estilo de Pregação</h4>
-                      <p className="text-gray-600 text-sm">Equilibrado e pastoral</p>
                     </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Tom Predominante</h4>
-                      <p className="text-gray-600 text-sm">Inspirador e acolhedor</p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Estrutura Preferida</h4>
-                      <p className="text-gray-600 text-sm">Introdução, desenvolvimento em 3 pontos, conclusão prática</p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Temas Recorrentes</h4>
-                      <p className="text-gray-600 text-sm">Graça, amor, esperança, transformação</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
