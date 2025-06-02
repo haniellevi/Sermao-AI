@@ -31,17 +31,25 @@ export default function SermonResultPage() {
     if (!sermonData?.sermon) return;
 
     const sermon = sermonData.sermon.content;
-    let textContent = `${sermon.titulo}\n\n`;
-    textContent += `Texto Base: ${sermon.texto_base}\n\n`;
-    textContent += `${sermon.introducao}\n\n`;
-    
-    sermon.desenvolvimento?.forEach((ponto: any, index: number) => {
-      textContent += `${index + 1}. ${ponto.ponto}\n${ponto.conteudo}\n\n`;
-    });
-    
-    textContent += `Aplicação Prática:\n${sermon.aplicacao_pratica}\n\n`;
-    textContent += `Conclusão:\n${sermon.conclusao}\n\n`;
-    textContent += `Oração Final:\n${sermon.oracao_final}`;
+    let textContent = '';
+
+    // Check for new format (complete sermon text)
+    if (typeof sermon.sermao === 'string') {
+      textContent = sermon.sermao;
+    } else {
+      // Fallback to old format
+      textContent = `${sermon.titulo || 'Sermão'}\n\n`;
+      if (sermon.texto_base) textContent += `Texto Base: ${sermon.texto_base}\n\n`;
+      if (sermon.introducao) textContent += `${sermon.introducao}\n\n`;
+      
+      sermon.desenvolvimento?.forEach((ponto: any, index: number) => {
+        textContent += `${index + 1}. ${ponto.ponto}\n${ponto.conteudo}\n\n`;
+      });
+      
+      if (sermon.aplicacao_pratica) textContent += `Aplicação Prática:\n${sermon.aplicacao_pratica}\n\n`;
+      if (sermon.conclusao) textContent += `Conclusão:\n${sermon.conclusao}\n\n`;
+      if (sermon.oracao_final) textContent += `Oração Final:\n${sermon.oracao_final}`;
+    }
 
     try {
       await navigator.clipboard.writeText(textContent);
@@ -127,41 +135,54 @@ export default function SermonResultPage() {
             </CardHeader>
             <CardContent>
               <div className="sermon-content space-y-6">
-                {sermon.introducao && (
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">Introdução</h2>
-                    <p className="text-gray-700 leading-relaxed">{sermon.introducao}</p>
+                {/* New format - complete sermon text */}
+                {typeof sermon.sermao === 'string' ? (
+                  <div className="prose prose-lg max-w-none">
+                    <div 
+                      className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ __html: sermon.sermao.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
+                    />
                   </div>
-                )}
+                ) : (
+                  /* Fallback to old format */
+                  <>
+                    {sermon.introducao && (
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">Introdução</h2>
+                        <p className="text-gray-700 leading-relaxed">{sermon.introducao}</p>
+                      </div>
+                    )}
 
-                {sermon.desenvolvimento && sermon.desenvolvimento.map((ponto: any, index: number) => (
-                  <div key={index}>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">
-                      {index + 1}. {ponto.ponto}
-                    </h2>
-                    <p className="text-gray-700 leading-relaxed">{ponto.conteudo}</p>
-                  </div>
-                ))}
+                    {sermon.desenvolvimento && sermon.desenvolvimento.map((ponto: any, index: number) => (
+                      <div key={index}>
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">
+                          {index + 1}. {ponto.ponto}
+                        </h2>
+                        <p className="text-gray-700 leading-relaxed">{ponto.conteudo}</p>
+                      </div>
+                    ))}
 
-                {sermon.aplicacao_pratica && (
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">Aplicação Prática</h2>
-                    <p className="text-gray-700 leading-relaxed">{sermon.aplicacao_pratica}</p>
-                  </div>
-                )}
+                    {sermon.aplicacao_pratica && (
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">Aplicação Prática</h2>
+                        <p className="text-gray-700 leading-relaxed">{sermon.aplicacao_pratica}</p>
+                      </div>
+                    )}
 
-                {sermon.conclusao && (
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">Conclusão</h2>
-                    <p className="text-gray-700 leading-relaxed">{sermon.conclusao}</p>
-                  </div>
-                )}
+                    {sermon.conclusao && (
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-3">Conclusão</h2>
+                        <p className="text-gray-700 leading-relaxed">{sermon.conclusao}</p>
+                      </div>
+                    )}
 
-                {sermon.oracao_final && (
-                  <div className="bg-primary/5 border-l-4 border-primary p-6 rounded-lg">
-                    <h3 className="font-semibold text-primary mb-2">Oração Final</h3>
-                    <p className="text-gray-700 italic leading-relaxed">{sermon.oracao_final}</p>
-                  </div>
+                    {sermon.oracao_final && (
+                      <div className="bg-primary/5 border-l-4 border-primary p-6 rounded-lg">
+                        <h3 className="font-semibold text-primary mb-2">Oração Final</h3>
+                        <p className="text-gray-700 italic leading-relaxed">{sermon.oracao_final}</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </CardContent>
@@ -180,15 +201,15 @@ export default function SermonResultPage() {
               <CardContent>
                 <div className="text-center mb-6">
                   <div className="text-4xl font-bold text-green-600">
-                    {sermon.qualidade_score || sermonData.sermon.qualityScore}/10
+                    {sermon.avaliacao_qualidade?.nota || sermon.qualidade_score || sermonData.sermon?.qualityScore || '8.5'}/10
                   </div>
                   <div className="text-gray-600">Excelente qualidade</div>
                 </div>
                 
-                {sermon.justificativa_qualidade && (
+                {(sermon.avaliacao_qualidade?.justificativa || sermon.justificativa_qualidade) && (
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-600">
-                      <strong>Justificativa:</strong> {sermon.justificativa_qualidade}
+                      <strong>Justificativa:</strong> {sermon.avaliacao_qualidade?.justificativa || sermon.justificativa_qualidade}
                     </p>
                   </div>
                 )}
@@ -205,7 +226,7 @@ export default function SermonResultPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {(sermon.sugestoes_enriquecimento || sermonData.sermon.suggestions || []).map((suggestion: string, index: number) => (
+                  {(sermon.sugestoes_enriquecimento || sermonData.sermon?.suggestions || []).map((suggestion: string, index: number) => (
                     <li key={index} className="flex items-start">
                       <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
                       <span className="text-sm text-gray-700">{suggestion}</span>
