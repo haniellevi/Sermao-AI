@@ -174,9 +174,20 @@ Seja preciso, objetivo e baseie-se exclusivamente no conteúdo analisado.
     const dnaResponse = await callGemini(dnaPrompt);
     
     try {
-      return JSON.parse(dnaResponse);
+      // Clean the response to remove markdown formatting
+      let cleanedResponse = dnaResponse.trim();
+      
+      // Remove markdown code block markers
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      return JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error('Erro ao processar resposta da IA:', parseError);
+      console.error('Resposta original da IA:', dnaResponse);
       return {
         teologia: "Análise teológica baseada no conteúdo fornecido",
         estilo: "Estilo homilético identificado no material",
