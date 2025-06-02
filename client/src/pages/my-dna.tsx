@@ -19,7 +19,8 @@ import {
   CheckCircle, 
   AlertTriangle,
   Wand2,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
