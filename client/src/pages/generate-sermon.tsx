@@ -67,7 +67,7 @@ export default function GenerateSermonPage() {
         description: "Seu sermão personalizado está pronto.",
       });
       console.log('Resposta da API:', data);
-      setLocation(`/sermon-result?id=${data.sermonId}`);
+      setLocation(`/sermon-result/${data.sermonId}`);
     },
     onError: (error: any) => {
       toast({

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/layout/navbar';
@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 export default function SermonResultPage() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
-  const sermonId = new URLSearchParams(location.split('?')[1]).get('id');
+  const params = useParams();
+  const sermonId = params.id;
 
   const { data: sermonData, isLoading, error } = useQuery({
     queryKey: ['/api/sermons', sermonId],
