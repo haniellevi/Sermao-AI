@@ -342,33 +342,82 @@ export default function MyDNAPage() {
             <CardContent>
               <div className="bg-gray-50 rounded-lg p-6">
                 {dnaData.activeProfile.type === "customizado" && dnaData.activeProfile.customAttributes ? (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Estilo de Pregação</h4>
-                      <p className="text-gray-600 text-sm">
-                        {dnaData.activeProfile.customAttributes.estilo_pregacao || "Não definido"}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Tom Predominante</h4>
-                      <p className="text-gray-600 text-sm">
-                        {dnaData.activeProfile.customAttributes.tom_predominante || "Não definido"}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Estrutura Preferida</h4>
-                      <p className="text-gray-600 text-sm">
-                        {dnaData.activeProfile.customAttributes.estrutura_preferida || "Não definido"}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-2">Temas Recorrentes</h4>
-                      <p className="text-gray-600 text-sm">
-                        {Array.isArray(dnaData.activeProfile.customAttributes.temas_recorrentes) 
-                          ? dnaData.activeProfile.customAttributes.temas_recorrentes.join(", ")
-                          : "Não definido"}
-                      </p>
-                    </div>
+                  <div className="space-y-8">
+                    {/* Linguagem Verbal */}
+                    {dnaData.activeProfile.customAttributes.linguagemVerbal && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Linguagem Verbal</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Formalidade</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linguagemVerbal.formalidade || "Não identificado"}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Vocabulário</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linguagemVerbal.vocabulario || "Não identificado"}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <h4 className="font-medium text-gray-900 mb-1">Palavras-chave e Frases de Efeito</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linguagemVerbal.palavrasChaveFrasesEfeito || "Não identificado"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tom e Comunicação */}
+                    {dnaData.activeProfile.customAttributes.tomEComunicacao && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Tom e Comunicação</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Tom Geral</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.tomEComunicacao.tomGeral || "Não identificado"}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Paixão e Intensidade</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.tomEComunicacao.nivelPaixaoIntensidade || "Não identificado"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Estrutura e Estilo Homilético */}
+                    {dnaData.activeProfile.customAttributes.estruturaESiloHomiletico && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Estrutura e Estilo Homilético</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Estilo Principal</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.estruturaESiloHomiletico.estiloPrincipal || "Não identificado"}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Introdução</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.estruturaESiloHomiletico.introducao || "Não identificado"}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <h4 className="font-medium text-gray-900 mb-1">Uso de Ilustrações</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.estruturaESiloHomiletico.usoIlustracoesAnalogias || "Não identificado"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Linha Teológica */}
+                    {dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Linha Teológica e Interpretativa</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Visão Geral</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa.visaoGeral || "Não identificado"}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-1">Abordagem Hermenêutica</h4>
+                            <p className="text-gray-600 text-sm">{dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa.abordagemHermeneutica || "Não identificado"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 gap-6">

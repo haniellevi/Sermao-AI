@@ -145,26 +145,53 @@ const processDNA = async (userId: number, files: Express.Multer.File[], pastedTe
   }
 
   const dnaPrompt = `
-Você é um especialista em análise homilética e estilo pastoral. Analise o seguinte conteúdo de sermões/pregações e extraia o DNA único do pregador:
+Você é um Agente Especialista em Análise de Estilo Homilético e Teológico, com a função crítica de criar um perfil abrangente e altamente descritivo do "DNA do Pregador" a partir de textos e transcrições de pregações. Seu objetivo é identificar as características mais sutis e únicas da comunicação do pregador, destilando um perfil tão preciso que outro agente de IA possa replicar seu estilo com fidelidade.
 
-CONTEÚDO DOS SERMÕES:
+CONTEÚDO DAS PREGAÇÕES PARA ANÁLISE:
 ${allContent}
 
-Com base nesta análise, crie um perfil completo do DNA do pregador em formato JSON com as seguintes características:
+Analise profundamente o conteúdo acima e extraia os seguintes atributos, apresentando-os em formato JSON estruturado:
 
+FORMATO DE SAÍDA (JSON - Estritamente neste formato):
 {
-  "estilo_pregacao": "Descreva o estilo predominante (expositivo, temático, narrativo, etc.)",
-  "tom_predominante": "Tom emocional e pastoral (inspirador, confrontativo, pastoral, etc.)",
-  "estrutura_preferida": "Como o pregador organiza seus sermões",
-  "linguagem_caracteristica": "Tipo de linguagem usada (formal, coloquial, técnica, etc.)",
-  "temas_recorrentes": ["lista", "de", "temas", "favoritos"],
-  "uso_de_ilustracoes": "Como usa exemplos e ilustrações",
-  "aplicacao_pratica": "Como faz aplicações práticas",
-  "referencias_biblicas": "Padrão de uso de textos bíblicos",
-  "publico_alvo_preferido": "Tipo de audiência que mais se conecta",
-  "pontos_fortes": ["lista", "dos", "principais", "pontos", "fortes"],
-  "caracteristicas_unicas": "O que torna este pregador único"
+  "linguagemVerbal": {
+    "formalidade": "Descrição detalhada do nível de formalidade da linguagem",
+    "vocabulario": "Análise do tipo de vocabulário utilizado",
+    "palavrasChaveFrasesEfeito": "Frases e palavras características frequentemente utilizadas",
+    "clarezaPrecisao": "Avaliação da clareza e precisão da comunicação",
+    "sintaxeFrasal": "Padrão de construção das frases",
+    "ritmoDaFala": "Descrição do ritmo e cadência da comunicação"
+  },
+  "tomEComunicacao": {
+    "tomGeral": "Tom predominante na comunicação",
+    "nivelPaixaoIntensidade": "Nível de paixão e intensidade demonstrados",
+    "usoPerguntasRetoricas": "Como utiliza perguntas retóricas",
+    "chamadasAcao": "Estilo das chamadas à ação"
+  },
+  "estruturaESiloHomiletico": {
+    "estiloPrincipal": "Estilo homilético predominante",
+    "introducao": "Padrão de introdução dos sermões",
+    "desenvolvimentoCorpo": "Como desenvolve o corpo da mensagem",
+    "transicoes": "Estilo das transições entre pontos",
+    "conclusao": "Padrão de conclusão das mensagens",
+    "usoIlustracoesAnalogias": "Como utiliza ilustrações e analogias"
+  },
+  "linhaTeologicaEInterpretativa": {
+    "enfasesDoutrinarias": "Principais ênfases doutrinárias identificadas",
+    "abordagemHermeneutica": "Abordagem de interpretação bíblica",
+    "fontesAutoridade": "Principais fontes de autoridade utilizadas",
+    "visaoGeral": "Linha teológica geral identificada"
+  },
+  "recursosRetoricosEDidaticos": {
+    "figurasLinguagem": "Uso de figuras de linguagem",
+    "usoHumor": "Como utiliza o humor",
+    "interacaoAudiencia": "Estilo de interação com a audiência",
+    "didaticaEspecifica": "Recursos didáticos específicos utilizados",
+    "linguagemInclusiva": "Uso de linguagem inclusiva"
+  }
 }
+
+Seja o mais detalhado e descritivo possível em cada campo. Se uma característica não for claramente identificável, use "Não claramente identificável" ou "Pouco evidente", mas esforce-se para inferir baseado no conteúdo disponível.
 `;
 
   try {
