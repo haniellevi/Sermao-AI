@@ -638,6 +638,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/sermons/:id', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sermonId = parseInt(req.params.id);
+      const { title, content } = req.body;
+
+      // Verify sermon ownership
+      const existingSermon = await storage.getSermon(sermonId);
+      if (!existingSermon || existingSermon.userId !== userId) {
+        return res.status(404).json({ message: 'Sermão não encontrado' });
+      }
+
+      // Update sermon
+      const updatedSermon = await storage.updateSermon(sermonId, {
+        title: title || existingSermon.title,
+        content: content || existingSermon.content,
+      });
+
+      if (!updatedSermon) {
+        return res.status(500).json({ message: 'Falha ao atualizar sermão' });
+      }
+
+      res.json(updatedSermon);
+    } catch (error: any) {
+      console.error('Erro ao atualizar sermão:', error);
+      res.status(500).json({ message: 'Falha ao atualizar sermão' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

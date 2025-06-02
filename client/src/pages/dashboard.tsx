@@ -90,24 +90,26 @@ export default function DashboardPage() {
           </Link>
 
           {/* History Card */}
-          <Card className="shadow-lg hover:shadow-xl transition-all cursor-pointer group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-emerald-100 rounded-full p-3 group-hover:bg-emerald-200 transition-colors">
-                  <Clock className="w-8 h-8 text-emerald-600" />
+          <Link href="/history">
+            <Card className="shadow-lg hover:shadow-xl transition-all cursor-pointer group">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-emerald-100 rounded-full p-3 group-hover:bg-emerald-200 transition-colors">
+                    <Clock className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                    {Array.isArray(sermonsData) ? sermonsData.length : 0} sermões
+                  </div>
                 </div>
-                <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                  {Array.isArray(sermonsData) ? sermonsData.length : 0} sermões
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Histórico</h3>
+                <p className="text-gray-600 text-sm mb-4">Acesse seus sermões anteriores</p>
+                <div className="flex items-center text-emerald-600 text-sm font-medium group-hover:text-emerald-500">
+                  <span>Ver histórico</span>
+                  <div className="ml-2 transform group-hover:translate-x-1 transition-transform">→</div>
                 </div>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Histórico</h3>
-              <p className="text-gray-600 text-sm mb-4">Acesse seus sermões anteriores</p>
-              <div className="flex items-center text-emerald-600 text-sm font-medium group-hover:text-emerald-500">
-                <span>Ver histórico</span>
-                <div className="ml-2 transform group-hover:translate-x-1 transition-transform">→</div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Recent Activity */}

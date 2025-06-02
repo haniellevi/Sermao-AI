@@ -14,6 +14,8 @@ import DashboardPage from "@/pages/dashboard";
 import MyDNAPage from "@/pages/my-dna";
 import GenerateSermonPage from "@/pages/generate-sermon";
 import SermonResultPage from "@/pages/sermon-result";
+import HistoryPage from "@/pages/history";
+import EditSermonPage from "@/pages/edit-sermon";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +29,8 @@ function Router() {
       <Route path="/my-dna" component={MyDNAPage} />
       <Route path="/generate-sermon" component={GenerateSermonPage} />
       <Route path="/sermon-result/:id" component={SermonResultPage} />
+      <Route path="/history" component={HistoryPage} />
+      <Route path="/edit-sermon/:id" component={EditSermonPage} />
       <Route component={NotFound} />
     </Switch>
   );
