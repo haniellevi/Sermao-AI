@@ -39,11 +39,11 @@ export default function GenerateSermonPage() {
     defaultValues: {
       dnaType: dnaData?.hasCustomDNA ? "customizado" : "padrao",
       theme: "",
-      purpose: "",
-      audience: "",
-      duration: "",
-      style: "",
-      context: "",
+      purpose: "nenhum",
+      audience: "nenhum",
+      duration: "nenhum",
+      style: "nenhum",
+      context: "nenhum",
       referenceUrls: "",
     },
   });
@@ -197,7 +197,7 @@ export default function GenerateSermonPage() {
                         <SelectValue placeholder="Selecione o propósito" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="nenhum">Nenhum</SelectItem>
                         <SelectItem value="inspirar">Inspirar</SelectItem>
                         <SelectItem value="confrontar">Confrontar</SelectItem>
                         <SelectItem value="ensinar">Ensinar</SelectItem>
@@ -215,7 +215,7 @@ export default function GenerateSermonPage() {
                         <SelectValue placeholder="Selecione o público" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="nenhum">Nenhum</SelectItem>
                         <SelectItem value="jovens">Jovens</SelectItem>
                         <SelectItem value="familias">Famílias</SelectItem>
                         <SelectItem value="lideres">Líderes</SelectItem>
@@ -234,7 +234,7 @@ export default function GenerateSermonPage() {
                         <SelectValue placeholder="Selecione a duração" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="nenhum">Nenhum</SelectItem>
                         <SelectItem value="10-minutos">10 minutos</SelectItem>
                         <SelectItem value="15-minutos">15 minutos</SelectItem>
                         <SelectItem value="30-minutos">30 minutos</SelectItem>
@@ -252,7 +252,7 @@ export default function GenerateSermonPage() {
                         <SelectValue placeholder="Selecione o estilo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="nenhum">Nenhum</SelectItem>
                         <SelectItem value="expositivo">Expositivo</SelectItem>
                         <SelectItem value="tematico">Temático</SelectItem>
                         <SelectItem value="narrativo">Narrativo</SelectItem>
@@ -269,7 +269,7 @@ export default function GenerateSermonPage() {
                         <SelectValue placeholder="Selecione o contexto" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="nenhum">Nenhum</SelectItem>
                         <SelectItem value="culto">Culto</SelectItem>
                         <SelectItem value="casamento">Casamento</SelectItem>
                         <SelectItem value="funeral">Funeral</SelectItem>
