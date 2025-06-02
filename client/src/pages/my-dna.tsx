@@ -30,6 +30,7 @@ import { apiRequest } from "@/lib/api";
 interface DnaFormData {
   pastedTexts: string[];
   youtubeLinks: string[];
+  personalDescription: string;
 }
 
 export default function MyDNAPage() {
@@ -49,16 +50,18 @@ export default function MyDNAPage() {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<DnaFormData>({
     resolver: zodResolver(createDnaSchema.omit({ uploadedFiles: true })),
     defaultValues: {
       pastedTexts: ["", "", "", "", ""],
       youtubeLinks: ["", "", ""],
+      personalDescription: "",
     },
   });
 
   const createDnaMutation = useMutation({
-    mutationFn: async (data: { files: File[]; pastedTexts: string[]; youtubeLinks: string[] }) => {
+    mutationFn: async (data: { files: File[]; pastedTexts: string[]; youtubeLinks: string[]; personalDescription: string }) => {
       const formData = new FormData();
       
       data.files.forEach((file) => {
@@ -67,6 +70,7 @@ export default function MyDNAPage() {
       
       formData.append('pastedTexts', JSON.stringify(data.pastedTexts.filter(text => text.trim())));
       formData.append('youtubeLinks', JSON.stringify(data.youtubeLinks.filter(link => link.trim())));
+      formData.append('personalDescription', data.personalDescription || '');
 
       const response = await fetch('/api/user/dna', {
         method: 'POST',
@@ -103,20 +107,39 @@ export default function MyDNAPage() {
     },
   });
 
-  const onSubmit = (data: DnaFormData) => {
-    if (uploadedFiles.length === 0 && !data.pastedTexts.some(text => text.trim()) && !data.youtubeLinks.some(link => link.trim())) {
-      toast({
-        title: "Conteúdo necessário",
-        description: "Adicione pelo menos um arquivo, texto ou link do YouTube para análise.",
-        variant: "destructive",
+  // Função para carregar dados existentes do DNA
+  const loadExistingData = () => {
+    if (dnaData?.activeProfile) {
+      const profile = dnaData.activeProfile;
+      
+      // Carregar textos colados existentes
+      const existingTexts = profile.content ? JSON.parse(profile.content).pastedTexts || [] : [];
+      existingTexts.forEach((text: string, index: number) => {
+        if (index < 5) {
+          setValue(`pastedTexts.${index}`, text);
+        }
       });
-      return;
-    }
 
+      // Carregar links do YouTube existentes
+      const existingLinks = profile.content ? JSON.parse(profile.content).youtubeLinks || [] : [];
+      existingLinks.forEach((link: string, index: number) => {
+        if (index < 3) {
+          setValue(`youtubeLinks.${index}`, link);
+        }
+      });
+
+      // Carregar descrição pessoal existente
+      const existingDescription = profile.content ? JSON.parse(profile.content).personalDescription || "" : "";
+      setValue("personalDescription", existingDescription);
+    }
+  };
+
+  const onSubmit = (data: DnaFormData) => {
     createDnaMutation.mutate({
       files: uploadedFiles,
       pastedTexts: data.pastedTexts,
       youtubeLinks: data.youtubeLinks,
+      personalDescription: data.personalDescription,
     });
   };
 

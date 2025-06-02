@@ -123,6 +123,7 @@ export const createDnaSchema = z.object({
   })).optional().default([]),
   pastedTexts: z.array(z.string()).optional().default([]),
   youtubeLinks: z.array(z.string()).optional().default([]),
+  personalDescription: z.string().optional().default(""),
 });
 
 // Types
