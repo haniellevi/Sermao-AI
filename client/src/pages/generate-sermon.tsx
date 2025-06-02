@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { generateSermonSchema, type GenerateSermonRequest } from "@shared/schema";
 import { apiRequest } from "@/lib/api";
+import { SermonLoading } from "@/components/ui/sermon-loading";
 
 export default function GenerateSermonPage() {
   const [, setLocation] = useLocation();
@@ -85,33 +86,14 @@ export default function GenerateSermonPage() {
     return null;
   }
 
-  if (showLoading) {
-    return (
+
+
+  return (
+    <>
+      <SermonLoading isVisible={showLoading} />
       <div className="min-h-screen bg-slate-50">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <Card className="shadow-lg">
-              <CardContent className="p-8 text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Gerando seu sermão...</h3>
-                <p className="text-gray-600">A IA está analisando suas preferências e criando um sermão personalizado</p>
-                <div className="mt-6 bg-gray-200 rounded-full h-2 max-w-md mx-auto">
-                  <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: "75%" }} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
-      <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* DNA Selection */}
           <Card className="shadow-lg mb-8">
@@ -320,5 +302,6 @@ export default function GenerateSermonPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
