@@ -11,16 +11,25 @@ import { useMutation } from "@tanstack/react-query";
 import { UserPlus, ArrowLeft, Eye, EyeOff, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { insertUserSchema, type InsertUser } from "@shared/schema";
+import { type InsertUser } from "@shared/schema";
 import { apiRequest } from "@/lib/api";
+import { z } from "zod";
 
-const registerFormSchema = insertUserSchema.extend({
-  acceptTerms: insertUserSchema.shape.email.pipe(
-    insertUserSchema.shape.email.refine(() => true, "Você deve aceitar os termos de uso")
-  ).optional(),
+const registerFormSchema = z.object({
+  email: z.string().email("Email inválido"),
+  name: z.string().min(1, "Nome é obrigatório"),
+  password: z.string()
+    .min(6, "A senha deve ter pelo menos 6 caracteres")
+    .regex(/[0-9]/, "A senha deve conter pelo menos um número")
+    .regex(/[^a-zA-Z0-9]/, "A senha deve conter pelo menos um caractere especial"),
+  confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória"),
+  acceptTerms: z.boolean().refine(val => val === true, "Você deve aceitar os termos de uso").optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
 });
 
-type RegisterFormData = InsertUser & { acceptTerms?: boolean };
+type RegisterFormData = z.infer<typeof registerFormSchema>;
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
@@ -141,10 +150,24 @@ export default function RegisterPage() {
                   </div>
                   <div className="flex items-center text-xs text-muted-foreground mt-2">
                     <Info className="w-3 h-3 mr-1" />
-                    Use ao menos 8 caracteres com letras e números
+                    Use ao menos 6 caracteres com números e caracteres especiais
                   </div>
                   {errors.password && (
                     <p className="text-sm text-destructive">{errors.password.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Digite a senha novamente"
+                    {...register("confirmPassword")}
+                    className={errors.confirmPassword ? "border-destructive" : ""}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
                   )}
                 </div>
 

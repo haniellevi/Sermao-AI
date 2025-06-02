@@ -54,11 +54,20 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Insert schemas
+// Insert schemas with password validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   activeDnaProfileId: true,
+}).extend({
+  password: z.string()
+    .min(6, "A senha deve ter pelo menos 6 caracteres")
+    .regex(/[0-9]/, "A senha deve conter pelo menos um número")
+    .regex(/[^a-zA-Z0-9]/, "A senha deve conter pelo menos um caractere especial"),
+  confirmPassword: z.string().min(1, "Confirmação de senha é obrigatória")
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
 });
 
 export const insertDnaProfileSchema = createInsertSchema(dnaProfiles).omit({
