@@ -334,10 +334,20 @@ export default function MyDNAPage() {
         {dnaData?.activeProfile && (
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Dna className="w-5 h-5 mr-2" />
-                Preview do DNA Atual
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center">
+                  <Dna className="w-5 h-5 mr-2" />
+                  Preview do DNA Atual
+                </CardTitle>
+                <Button
+                  onClick={() => setShowForm(true)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Atualizar DNA
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="bg-gray-50 rounded-lg p-6">
