@@ -245,32 +245,6 @@ export default function MyDNAPage() {
                     maxFiles={5}
                     acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']}
                   />
-                  
-                  {/* File List */}
-                  {uploadedFiles.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center">
-                            <FileText className="w-4 h-4 text-blue-500 mr-3" />
-                            <span className="text-gray-900">{file.name}</span>
-                            <span className="text-gray-500 text-sm ml-2">
-                              ({(file.size / 1024 / 1024).toFixed(1)} MB)
-                            </span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(index)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Text Input Section */}
@@ -381,7 +355,7 @@ export default function MyDNAPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="flex items-center">
                   <Dna className="w-5 h-5 mr-2" />
-                  Preview do DNA Atual
+                  Seu Perfil de Pregação
                 </CardTitle>
                 <Button
                   onClick={() => {
@@ -395,6 +369,9 @@ export default function MyDNAPage() {
                   Atualizar DNA
                 </Button>
               </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Este é seu perfil personalizado identificado pela análise de IA. Ele é usado automaticamente na geração de seus sermões.
+              </p>
             </CardHeader>
             <CardContent>
               <div className="bg-gray-50 rounded-lg p-6">
