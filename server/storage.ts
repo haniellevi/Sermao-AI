@@ -34,6 +34,7 @@ export interface IStorage {
   getSermonsByUserId(userId: number): Promise<Sermon[]>;
   createSermon(sermon: InsertSermon): Promise<Sermon>;
   updateSermon(id: number, updates: Partial<Sermon>): Promise<Sermon | undefined>;
+  deleteSermon(id: number): Promise<void>;
 
   // Password reset operations
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
@@ -151,6 +152,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(sermons.id, id))
       .returning();
     return sermon;
+  }
+
+  async deleteSermon(id: number): Promise<void> {
+    await db.delete(sermons).where(eq(sermons.id, id));
   }
 
   // Password reset operations

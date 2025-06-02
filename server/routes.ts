@@ -572,6 +572,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activeDnaProfile,
       });
 
+      // Check current sermon count and maintain limit of 5
+      const existingSermons = await storage.getSermonsByUserId(userId);
+      
+      // If user has 5 or more sermons, delete the oldest ones
+      if (existingSermons.length >= 5) {
+        const sermonsToDelete = existingSermons
+          .sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateA - dateB;
+          })
+          .slice(0, existingSermons.length - 4); // Keep 4, delete the rest
+        
+        for (const sermonToDelete of sermonsToDelete) {
+          await storage.deleteSermon(sermonToDelete.id);
+        }
+      }
+
       // Save sermon to database
       const sermon = await storage.createSermon({
         userId,
