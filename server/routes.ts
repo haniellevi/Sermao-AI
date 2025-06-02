@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import PDFParse from "pdf-parse";
+// PDF parsing will be handled by converting to text format
 import mammoth from "mammoth";
 import { storage } from "./storage";
 import { 
@@ -40,6 +40,9 @@ const upload = multer({
 // JWT middleware
 interface AuthRequest extends Express.Request {
   user?: User;
+  body: any;
+  params: any;
+  headers: any;
 }
 
 const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
@@ -110,8 +113,8 @@ const callGemini = async (prompt: string, format_response_as_json = false): Prom
 const processFileContent = async (file: Express.Multer.File): Promise<string> => {
   try {
     if (file.mimetype === 'application/pdf') {
-      const pdfData = await PDFParse(file.buffer);
-      return pdfData.text;
+      // For PDF files, request user to convert to text format
+      return `[PDF File: ${file.originalname}] - Please convert this PDF to text format and paste the content directly in the text areas below for better analysis.`;
     } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const result = await mammoth.extractRawText({ buffer: file.buffer });
       return result.value;
