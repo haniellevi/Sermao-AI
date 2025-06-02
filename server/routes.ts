@@ -50,7 +50,7 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
+    return res.status(401).json({ message: 'Token de acesso necessário' });
   }
 
   try {
@@ -58,13 +58,13 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
     const user = await storage.getUser(decoded.userId);
     
     if (!user) {
-      return res.status(401).json({ message: 'Invalid token' });
+      return res.status(401).json({ message: 'Token inválido' });
     }
 
     req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
+    return res.status(403).json({ message: 'Token inválido ou expirado' });
   }
 };
 
@@ -385,13 +385,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find user
       const user = await storage.getUserByEmail(email);
       if (!user) {
-        return res.status(401).json({ message: 'Invalid email or password' });
+        return res.status(401).json({ message: 'Email ou senha inválidos' });
       }
 
       // Check password
       const isValidPassword = await comparePassword(password, user.password);
       if (!isValidPassword) {
-        return res.status(401).json({ message: 'Invalid email or password' });
+        return res.status(401).json({ message: 'Email ou senha inválidos' });
       }
 
       // Generate token
@@ -408,7 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Login error:', error);
-      res.status(400).json({ message: error.message || 'Login failed' });
+      res.status(400).json({ message: error.message || 'Falha no login' });
     }
   });
 
