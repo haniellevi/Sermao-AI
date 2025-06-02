@@ -36,6 +36,7 @@ interface DnaFormData {
 export default function MyDNAPage() {
   const [showForm, setShowForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<any[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -112,6 +113,10 @@ export default function MyDNAPage() {
     if (dnaData?.activeProfile) {
       const profile = dnaData.activeProfile;
       
+      // Carregar arquivos existentes
+      const files = profile.uploadedFiles || [];
+      setExistingFiles(files);
+      
       // Carregar textos colados existentes
       const existingTexts = profile.content ? JSON.parse(profile.content).pastedTexts || [] : [];
       existingTexts.forEach((text: string, index: number) => {
@@ -132,6 +137,11 @@ export default function MyDNAPage() {
       const existingDescription = profile.content ? JSON.parse(profile.content).personalDescription || "" : "";
       setValue("personalDescription", existingDescription);
     }
+  };
+
+  // Função para remover arquivo existente
+  const removeExistingFile = (index: number) => {
+    setExistingFiles(files => files.filter((_, i) => i !== index));
   };
 
   const onSubmit = (data: DnaFormData) => {
@@ -240,12 +250,51 @@ export default function MyDNAPage() {
                       <Upload className="w-5 h-5 text-primary mr-2" />
                       Upload de Sermões (até 5 arquivos)
                     </h4>
+                    
+                    {/* Existing Files */}
+                    {existingFiles.length > 0 && (
+                      <div className="mb-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Arquivos salvos anteriormente:</h5>
+                        <div className="space-y-2">
+                          {existingFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center">
+                                <FileText className="w-4 h-4 text-blue-500 mr-3" />
+                                <span className="text-gray-900">{file.name}</span>
+                                <span className="text-gray-500 text-sm ml-2">
+                                  ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                                </span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeExistingFile(index)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {existingFiles.length} arquivo(s) salvo(s). Você pode excluir arquivos para adicionar novos.
+                        </p>
+                      </div>
+                    )}
+                    
                     <FileUpload
                       onFilesChange={setUploadedFiles}
                       files={uploadedFiles}
-                      maxFiles={5}
+                      maxFiles={5 - existingFiles.length}
                       acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']}
                     />
+                    
+                    {existingFiles.length > 0 && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Você pode adicionar {5 - existingFiles.length} novo(s) arquivo(s) além dos já salvos.
+                      </p>
+                    )}
                   </div>
 
                   {/* Text Input Section */}
