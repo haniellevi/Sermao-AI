@@ -93,11 +93,17 @@ const processDNA = async (
   userId: number, 
   files: Express.Multer.File[], 
   pastedTexts: string[], 
-  youtubeLinks: string[]
+  youtubeLinks: string[],
+  personalDescription: string
 ): Promise<Record<string, any>> => {
   try {
     // Create analysis prompt
     let contentForAnalysis = '';
+    
+    // Add personal description
+    if (personalDescription.trim()) {
+      contentForAnalysis += 'DESCRIÇÃO PESSOAL DO PREGADOR:\n' + personalDescription + '\n\n';
+    }
     
     // Add pasted texts
     if (pastedTexts.length > 0) {
@@ -448,9 +454,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse JSON fields from form data
       const pastedTexts = req.body.pastedTexts ? JSON.parse(req.body.pastedTexts) : [];
       const youtubeLinks = req.body.youtubeLinks ? JSON.parse(req.body.youtubeLinks) : [];
+      const personalDescription = req.body.personalDescription || '';
 
       // Process DNA with AI
-      const customAttributes = await processDNA(userId, files, pastedTexts, youtubeLinks);
+      const customAttributes = await processDNA(userId, files, pastedTexts, youtubeLinks, personalDescription);
 
       // Handle DNA profile creation/update
       const existingProfiles = await storage.getDnaProfilesByUserId(userId);
@@ -462,8 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dnaProfile = await storage.updateDnaProfile(existingCustomProfile.id, {
           customAttributes,
           uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
-          pastedTexts: pastedTexts,
-          youtubeLinks: youtubeLinks,
+          content: JSON.stringify({ pastedTexts, youtubeLinks, personalDescription }),
         });
       } else {
         // Create new profile
@@ -472,8 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: "customizado",
           customAttributes,
           uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
-          pastedTexts: pastedTexts,
-          youtubeLinks: youtubeLinks,
+          content: JSON.stringify({ pastedTexts, youtubeLinks, personalDescription }),
         });
       }
 

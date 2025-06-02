@@ -321,6 +321,26 @@ export default function MyDNAPage() {
                   </div>
                 </div>
 
+                {/* Personal Description Section */}
+                <div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <Edit className="w-5 h-5 text-blue-600 mr-2" />
+                    Eu gosto de pregar assim
+                  </h4>
+                  <div>
+                    <Label htmlFor="personal-description" className="text-sm font-medium text-gray-700">
+                      Descreva com suas palavras quem é você como pregador, e como você gosta de ministrar a Palavra
+                    </Label>
+                    <Textarea
+                      id="personal-description"
+                      rows={6}
+                      placeholder="Ex: Sou um pregador expositivo que gosta de conectar as Escrituras com situações práticas do dia a dia. Prefiro usar ilustrações simples e histórias pessoais para tornar a mensagem mais acessível. Meu estilo é conversacional e procuro sempre aplicar a Palavra de forma prática na vida dos ouvintes..."
+                      {...register('personalDescription')}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
                 {/* Submit Button */}
                 <div className="flex justify-between items-center pt-6 border-t">
                   <Button 
@@ -364,7 +384,10 @@ export default function MyDNAPage() {
                   Preview do DNA Atual
                 </CardTitle>
                 <Button
-                  onClick={() => setShowForm(true)}
+                  onClick={() => {
+                    setShowForm(true);
+                    loadExistingData();
+                  }}
                   variant="outline"
                   size="sm"
                 >
