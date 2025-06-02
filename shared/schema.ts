@@ -30,6 +30,7 @@ export const dnaProfiles = pgTable("dna_profiles", {
   uploadedFiles: jsonb("uploaded_files"), // Array of file metadata
   pastedTexts: jsonb("pasted_texts"), // Array of sermon texts
   youtubeLinks: jsonb("youtube_links"), // Array of YouTube URLs
+  content: text("content"), // JSON string with all input data including personal description
   createdAt: timestamp("created_at").defaultNow(),
 });
 
