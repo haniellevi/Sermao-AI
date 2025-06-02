@@ -1,0 +1,121 @@
+Você é um especialista em desenvolvimento full-stack com Python/Flask (backend) e React (frontend), e um mestre em integrar soluções de Inteligência Artificial avançadas. Sua tarefa é criar um projeto completo "Gerador de Sermões com IA" no Replit a partir desta descrição.
+Objetivo do Projeto:
+Crie uma aplicação web full-stack completa para "Gerador de Sermões com IA". A aplicação deve ser robusta, segura, intuitiva e focada na personalização do sermão com base no DNA do pregador, utilizando as capacidades avançadas do Google Gemini.
+Estrutura da Solicitação:
+Requisitos Técnicos Iniciais
+Funcionalidades Detalhadas (por Seção/Página)
+Backend (Python/Flask) - Lógica Principal
+Frontend (React) - Interface do Usuário
+Integração com IA (Modelos e Prompts Internos)
+Esquema do Banco de Dados
+Segurança e Chaves API
+Requisitos Não Funcionais
+
+1. Requisitos Técnicos Iniciais
+Linguagens/Frameworks: Backend em Python (Flask), Frontend em React.
+Banco de Dados: SQLite (para simplicidade inicial, deve ser facilmente migrável para PostgreSQL futuramente). Usar Flask-SQLAlchemy.
+Autenticação: Baseada em e-mail/senha com JWT para sessões. Usar Flask-Bcrypt para hash de senhas e PyJWT para tokens.
+Variáveis de Ambiente: Use o sistema de Secrets do Replit para chaves sensíveis.
+Estrutura de Projeto: Organize o código de forma modular e limpa (ex: app/routes.py, app/models.py, app/services.py para backend; frontend/ para React).
+
+2. Funcionalidades Detalhadas (por Seção/Página)
+2.1. Páginas de Autenticação
+Página de Boas-Vindas (/): Título, breve descrição, botões "Fazer Login" e "Criar Conta Grátis".
+Página de Login (/login): Formulário de login (email, senha), botão "Entrar", link "Criar Conta", link "Esqueci a Senha".
+Página de Cadastro (/register): Formulário de cadastro (nome, email, senha), botão "Cadastrar". Após o registro, criar automaticamente um DnaProfile do tipo "padrao" para o usuário.
+Página de Redefinição de Senha (/reset-password): Formulário para solicitar redefinição (email).
+Página de Redefinição de Senha Final (/reset-password/<token>): Formulário para nova senha (senha, confirmar senha), usando um token.
+Logout: Botão "Sair" no cabeçalho.
+2.2. Tela Principal / Dashboard (/dashboard)
+Layout: Cabeçalho/Menu de Navegação (links para "Meu DNA", "Gerar Novo Sermão", "Sair").
+Conteúdo: Mensagem de boas-vindas dinâmica "Bem-vindo, [Nome do Usuário]!". Cards de ação proeminentes para "Definir/Atualizar Meu DNA" e "Criar Novo Sermão".
+2.3. Seção "Meu DNA" (/my-dna)
+Título: "Seu DNA de Pregador".
+Status do DNA: Exibir claramente se "Seu DNA customizado já está definido." ou "Você ainda não tem um DNA customizado.".
+Botões de Ação:
+Gerar Meu DNA: Visível se o DNA customizado NÃO existe.
+Atualizar Meu DNA: Visível se o DNA customizado JÁ existe.
+Formulário de DNA (expansível/colapsável): Visível ao clicar nos botões acima.
+Uploads: File Upload (até 5 arquivos: PDF, DOC, TXT, ODT) com progresso visual.
+Textos: 5 Textarea para colar pregações.
+Links: 3 Input Text para links do YouTube.
+Botão: Analisar e Salvar DNA (desabilitado se vazio).
+Lógica:
+Apresentar o formulário preenchido se for "Atualizar".
+Enviar dados para o backend para processamento e salvamento.
+Ao salvar, o backend deve atualizar o active_dna_profile_id do usuário para o ID desse DNA customizado.
+2.4. Seção "Gerar Novo Sermão" (/generate-sermon)
+Título: "Configure Seu Sermão".
+Seleção do DNA: Dropdown ou Radio Group para escolher: "DNA Padrão" ou "Meu DNA Customizado" (habilitado/pré-selecionado se existir).
+Formulário de Entradas (Todos Opcionais):
+Tema do Sermão: (Input Text).
+Propósito da Pregação: (Dropdown: "Nenhum", "Inspirar", "Confrontar", "Ensinar", "Consolar", "Mobilizar para ação").
+Público-alvo: (Dropdown: "Nenhum", "Jovens", "Famílias", "Líderes", "Congregação geral", "Homens", "Mulheres").
+Duração Aproximada: (Dropdown: "Nenhum", "10 minutos", "15 minutos", "30 minutos", "45 minutos", "60 minutos").
+Estilo de Pregação Preferencial: (Dropdown: "Nenhum", "Expositivo", "Temático", "Narrativo", "Devocional").
+Contexto Específico: (Dropdown: "Nenhum", "Culto", "Casamento", "Funeral", "Estudo Bíblico", "Célula").
+URLs de Sermões de Referência Online: (Textarea multilinhas).
+Botão: Gerar Sermão (visualmente proeminente, com loading spinner).
+2.5. Seção "Sermão Gerado" (/sermon-result)
+Título: "Seu Sermão Gerado".
+Área de Exibição: Grande bloco de texto formatado (parágrafos, negritos) para o sermão.
+Botão: Copiar Sermão.
+Sugestões de Enriquecimento: Título e lista de sugestões.
+Avaliação de Qualidade: Título, nota (ex: 8.5/10), e justificativa.
+Botão: Gerar Novamente.
+
+3. Backend (Python/Flask) - Lógica Principal
+3.1. Estrutura do Flask:
+Organize o Flask em app/__init__.py, app/routes.py, app/models.py, app/services.py.
+Configure Flask-SQLAlchemy com SQLite.
+Configure Flask-Bcrypt e PyJWT.
+3.2. Modelos (app/models.py):
+User Model: id (PK), email (string, único), password_hash (string), name (string, opcional), active_dna_profile_id (string, opcional, para ID do DnaProfile).
+DnaProfile Model: id (PK), user_id (FK), type (string: "padrao"/"customizado"), custom_attributes (JSON string), uploaded_file_storage_ids (array JSON de IDs de arquivos/referências), pasted_texts (array JSON de strings), youtube_links (array JSON de strings).
+3.3. Rotas e Lógica (app/routes.py):
+Autenticação: /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/reset-password/request, /api/auth/reset-password/confirm.
+@jwt_required decorador para rotas protegidas.
+DNA:
+GET /api/user/dna: Retorna o DNA customizado e padrão do usuário logado e qual é o ativo.
+POST /api/user/dna: Recebe dados do frontend (base64 de arquivos, textos, links YouTube). Chama serviço para processar com IA e salvar/atualizar. Atualiza active_dna_profile_id do User.
+POST /api/user/dna/set_active: Define qual DNA (padrão ou customizado) é o ativo para o usuário.
+Sermão:
+POST /api/sermon/generate: Recebe parâmetros do sermão e dna_profile_id. Chama serviço para gerar sermão.
+(Opcional): POST /api/sermon/save, GET /api/sermons.
+3.4. Serviços (app/services.py):
+call_gemini(prompt_text, format_response_as_json=True):
+Lógica: Conecta à API do Google Gemini (google-generativeai SDK). Acessa GEMINI_API_KEY dos Secrets. Envia prompt_text para gemini-1.5-pro. Tenta parsear JSON se format_response_as_json for True. Inclui tratamento de erro.
+process_and_save_dna(user_id, files_data, pasted_texts, youtube_links):
+Lógica:
+Combina todos os textos de entrada.
+Implementar Processamento de Arquivos: Usar PyPDF2 (para PDF), python-docx (para DOCX) para extrair texto de files_data (Replit pode precisar de libs adicionais ou subprocessos para yt-dlp e ffmpeg para vídeos).
+Chama call_gemini com o PROMPT DO AGENTE CRIADOR DO DNA (detalhado na Seção 5.1).
+Salva/atualiza o DnaProfile no DB e atualiza active_dna_profile_id do User.
+get_bible_verses(topic):
+Lógica: Chama uma API externa da Bíblia (ex: https://bible-api.com/ ou outra) ou um banco de dados local de versículos.
+generate_sermon(user_id, dna_profile_id, tema, proposito, ...):
+Lógica:
+Busca DnaProfile (customizado ou padrão) usando dna_profile_id.
+Inferir valores padrão para parâmetros opcionais não fornecidos.
+Chama get_bible_verses.
+(Opcional): Implementar busca e resumo de urls_referencia.
+Construir o full_gemini_prompt:
+COLE A VERSÃO MAIS RECENTE E COMPLETA DO PROMPT DO AGENTE GERADOR DE SERMÃO (da Seção 5.2, incluindo todos os conhecimentos e diretrizes pastorais).
+INJETAR DINAMICAMENTE: O DNA do Pregador (string JSONizada para customizado, ou descrição fixa para padrão), os parâmetros de entrada (inferidos/fornecidos), os versículos bíblicos, e insights de referência.
+Chama call_gemini com o full_gemini_prompt.
+Retorna a resposta JSON do Gemini.
+
+4. Frontend (React) - Interface do Usuário
+4.1. Estrutura React:
+Use create-react-app ou uma estrutura de projeto React básica.
+Configure axios para chamadas API ao backend Flask.
+4.2. Componentes e Páginas:
+Páginas de Autenticação: Crie os componentes para login, registro, redefinição de senha. Devem fazer chamadas para as APIs Flask correspondentes.
+Dashboard: Componente de layout com navegação e cards de ação.
+Meu DNA: Componente para o formulário de DNA, com upload de arquivos (usando FormData para enviar para Flask), Textareas e Input Texts. Lógica de visibilidade/habilitação de botões.
+Gerar Sermão: Componente com os Input Text e Dropdowns para os parâmetros do sermão.
+Sermão Gerado: Componente para exibir o resultado JSON do sermão.
+4.3. Conectividade Frontend-Backend:
+Todas as chamadas API do React para o Flask devem usar o auth_token (JWT) no cabeçalho Authorization: Bearer [token].
+Lidar com loading states e mensagens de feedback.
+
