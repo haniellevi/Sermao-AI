@@ -19,13 +19,13 @@ export default function SermonResultPage() {
   });
 
   const copyToClipboard = async () => {
-    if (!sermonData?.sermon) return;
+    if (!sermonData) return;
 
     let sermon;
     try {
-      sermon = JSON.parse(sermonData.sermon.content);
+      sermon = JSON.parse(sermonData.content);
     } catch (error) {
-      sermon = { sermao: sermonData.sermon.content };
+      sermon = { sermao: sermonData.content };
     }
     
     let textContent = '';
@@ -81,7 +81,7 @@ export default function SermonResultPage() {
     );
   }
 
-  if (error || !sermonData?.sermon) {
+  if (error || !sermonData) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navbar />
@@ -102,11 +102,11 @@ export default function SermonResultPage() {
   // Parse the sermon content (it's stored as JSON string)
   let sermonContent;
   try {
-    sermonContent = JSON.parse(sermonData.sermon.content);
+    sermonContent = JSON.parse(sermonData.content);
   } catch (error) {
     console.error('Error parsing sermon content:', error);
     sermonContent = {
-      sermao: sermonData.sermon.content,
+      sermao: sermonData.content,
       sugestoes_enriquecimento: [],
       avaliacao_qualidade: "Não disponível"
     };
@@ -136,7 +136,7 @@ export default function SermonResultPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl font-bold flex items-center">
                   <FileText className="w-6 h-6 mr-2" />
-                  {sermonData.sermon.title}
+                  {sermonData.title}
                 </CardTitle>
                 <Button onClick={copyToClipboard} className="bg-primary hover:bg-primary/90">
                   <Copy className="w-4 h-4 mr-2" />
