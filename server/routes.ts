@@ -324,21 +324,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post('/api/auth/register', async (req, res) => {
     try {
-      const validatedData = insertUserSchema.parse(req.body);
+      const { email, password, name } = req.body;
+      
+      // Validate password requirements
+      if (!password || password.length < 6) {
+        return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres' });
+      }
+      
+      if (!/[0-9]/.test(password)) {
+        return res.status(400).json({ message: 'A senha deve conter pelo menos um número' });
+      }
+      
+      if (!/[^a-zA-Z0-9]/.test(password)) {
+        return res.status(400).json({ message: 'A senha deve conter pelo menos um caractere especial' });
+      }
+      
+      // Validate other fields
+      if (!email || !name) {
+        return res.status(400).json({ message: 'Email e nome são obrigatórios' });
+      }
       
       // Check if user already exists
-      const existingUser = await storage.getUserByEmail(validatedData.email);
+      const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: 'User already exists with this email' });
+        return res.status(400).json({ message: 'Usuário já existe com este email' });
       }
 
       // Hash password
-      const hashedPassword = await hashPassword(validatedData.password);
+      const hashedPassword = await hashPassword(password);
       
       // Create user (this also creates default DNA profile)
       const user = await storage.createUser({
-        ...validatedData,
+        email,
         password: hashedPassword,
+        name,
       });
 
       // Generate token
