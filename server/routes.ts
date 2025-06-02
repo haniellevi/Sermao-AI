@@ -209,18 +209,18 @@ Seja preciso, objetivo e baseie-se exclusivamente no conteúdo analisado.
 };
 
 // Sermon generation function  
-const generateSermonWithAI = async (request: any): Promise<string> => {
+const generateSermonWithAI = async (request: any): Promise<any> => {
   try {
-    const { tema, textos_biblicos, ocasiao_especial, observacoes_adicionais, activeDnaProfile } = request;
+    const { theme, purpose, audience, duration, style, context, referenceUrls, dnaType, activeDnaProfile } = request;
 
-    const dnaContext = activeDnaProfile ? `
+    const dnaContext = activeDnaProfile && dnaType === 'customizado' ? `
 PERFIL DNA DO PREGADOR:
 - Teologia: ${activeDnaProfile.customAttributes?.teologia || 'Não especificado'}
 - Estilo: ${activeDnaProfile.customAttributes?.estilo || 'Não especificado'}  
 - Audiência: ${activeDnaProfile.customAttributes?.audiencia || 'Não especificado'}
 - Linguagem: ${activeDnaProfile.customAttributes?.linguagem || 'Não especificado'}
 - Estrutura: ${activeDnaProfile.customAttributes?.estrutura || 'Não especificado'}
-` : '';
+` : 'PERFIL DNA: Padrão equilibrado e versátil';
 
     const sermonPrompt = `
 Você é um Agente Homilético Profissional especializado em criação de sermões personalizados de alta qualidade pastoral.
@@ -228,14 +228,30 @@ Você é um Agente Homilético Profissional especializado em criação de sermõ
 ${dnaContext}
 
 DADOS DO SERMÃO:
-- Tema: ${tema}
-- Textos Bíblicos: ${textos_biblicos}
-- Ocasião Especial: ${ocasiao_especial || 'Culto regular'}
-- Observações: ${observacoes_adicionais || 'Nenhuma'}
+- Tema: ${theme || 'Tema livre'}
+- Propósito: ${purpose === 'nenhum' ? 'Geral' : purpose}
+- Audiência: ${audience === 'nenhum' ? 'Congregação geral' : audience}
+- Duração: ${duration === 'nenhum' ? '30-45 minutos' : duration}
+- Estilo: ${style === 'nenhum' ? 'Expositivo' : style}
+- Contexto: ${context === 'nenhum' ? 'Culto regular' : context}
+- URLs de Referência: ${referenceUrls || 'Nenhuma'}
 
-TAREFA: Criar um sermão completo e estruturado seguindo rigorosamente o DNA do pregador.
+IMPORTANTE: Você DEVE retornar APENAS um JSON válido no seguinte formato exato:
 
-ESTRUTURA OBRIGATÓRIA:
+{
+  "sermao": "Texto completo do sermão gerado, **JÁ FORMATADO** com títulos, subtítulos, parágrafos espaçados, e uso de negrito/itálico estratégico para máxima legibilidade e impacto. Use formatação Markdown: \\n\\n## Título do Sermão\\n\\n### Introdução\\n\\n[Conteúdo...]\\n\\n### Ponto 1: Título do Ponto\\n\\n**Versículo** - _'Texto bíblico'_\\n\\n[Explanação...]\\n\\n### Conclusão\\n\\n[Conclusão...]",
+  "sugestoes_enriquecimento": [
+    "Sugestão 1: Ilustração ou dinâmica específica para engajar a audiência",
+    "Sugestão 2: Metáfora ou exemplo prático para tornar o ensino mais claro",
+    "Sugestão 3: Atividade interativa ou momento de reflexão"
+  ],
+  "avaliacao_qualidade": {
+    "nota": 9.2,
+    "justificativa": "Pontos fortes: fidelidade bíblica, clareza na estrutura, aplicação prática relevante. Sugestões: mais ilustrações contemporâneas, maior interação com a audiência."
+  }
+}
+
+ESTRUTURA DO SERMÃO:
 1. TÍTULO IMPACTANTE
 2. TEXTO BÍBLICO PRINCIPAL
 3. INTRODUÇÃO ENVOLVENTE
@@ -245,18 +261,38 @@ ESTRUTURA OBRIGATÓRIA:
 7. CONCLUSÃO PERSUASIVA
 8. ORAÇÃO FINAL
 
-CRITÉRIOS DE QUALIDADE:
-- Fidelidade bíblica rigorosa
-- Aderência total ao DNA do pregador
-- Linguagem adequada ao público-alvo
-- Aplicações práticas e relevantes
-- Estrutura lógica e clara
-- Impacto pastoral significativo
+Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 
-Retorne um sermão completo, bem formatado e pronto para pregação, considerando aderência ao DNA, solidez bíblica, clareza, relevância, poder persuasivo, originalidade e impacto pastoral integral
-`;
-
-    return await callGemini(sermonPrompt, true);
+    const response = await callGemini(sermonPrompt, true);
+    
+    // Clean and parse the response
+    let cleanedResponse = response.trim();
+    if (cleanedResponse.startsWith('```json')) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    try {
+      return JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Erro ao processar resposta do sermão:', parseError);
+      console.error('Resposta original:', response);
+      
+      // Fallback response
+      return {
+        sermao: "## Sermão Gerado\n\nDevido a problemas técnicos, o sermão não pôde ser gerado completamente. Por favor, tente novamente.",
+        sugestoes_enriquecimento: [
+          "Incluir testemunhos pessoais relevantes ao tema",
+          "Adicionar ilustrações visuais ou objetos para demonstração",
+          "Promover momentos de oração e reflexão pessoal"
+        ],
+        avaliacao_qualidade: {
+          nota: 5.0,
+          justificativa: "Sermão incompleto devido a erro técnico. Recomenda-se gerar novamente."
+        }
+      };
+    }
   } catch (error) {
     console.error('Erro na geração do sermão:', error);
     throw new Error('Falha ao gerar sermão com IA');
@@ -533,14 +569,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save sermon to database
       const sermon = await storage.createSermon({
         userId,
-        title: validatedData.tema || 'Sermão Gerado',
-        content: sermonContent,
+        title: validatedData.theme || 'Sermão Gerado',
+        content: JSON.stringify(sermonContent),
         dnaProfileId: activeDnaProfile?.id || null,
       });
 
       res.json({
         message: 'Sermão gerado com sucesso',
         sermon,
+        sermonContent,
+        sermonId: sermon.id
       });
     } catch (error: any) {
       console.error('Erro na geração do sermão:', error);
