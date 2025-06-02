@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   Wand2,
   X,
-  RefreshCw
+  RefreshCw,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,10 +34,22 @@ interface DnaFormData {
   personalDescription: string;
 }
 
+interface TextAreaField {
+  id: string;
+  value: string;
+}
+
+interface LinkField {
+  id: string;
+  value: string;
+}
+
 export default function MyDNAPage() {
   const [showForm, setShowForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [existingFiles, setExistingFiles] = useState<any[]>([]);
+  const [textFields, setTextFields] = useState<TextAreaField[]>([{ id: '0', value: '' }]);
+  const [linkFields, setLinkFields] = useState<LinkField[]>([{ id: '0', value: '' }]);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -144,11 +157,52 @@ export default function MyDNAPage() {
     setExistingFiles(files => files.filter((_, i) => i !== index));
   };
 
+  // Funções para gerenciar campos de texto
+  const addTextField = () => {
+    if (textFields.length < 5) {
+      setTextFields([...textFields, { id: Date.now().toString(), value: '' }]);
+    }
+  };
+
+  const removeTextField = (id: string) => {
+    if (textFields.length > 1) {
+      setTextFields(textFields.filter(field => field.id !== id));
+    }
+  };
+
+  const updateTextField = (id: string, value: string) => {
+    setTextFields(textFields.map(field => 
+      field.id === id ? { ...field, value } : field
+    ));
+  };
+
+  // Funções para gerenciar campos de links
+  const addLinkField = () => {
+    if (linkFields.length < 3) {
+      setLinkFields([...linkFields, { id: Date.now().toString(), value: '' }]);
+    }
+  };
+
+  const removeLinkField = (id: string) => {
+    if (linkFields.length > 1) {
+      setLinkFields(linkFields.filter(field => field.id !== id));
+    }
+  };
+
+  const updateLinkField = (id: string, value: string) => {
+    setLinkFields(linkFields.map(field => 
+      field.id === id ? { ...field, value } : field
+    ));
+  };
+
   const onSubmit = (data: DnaFormData) => {
+    const pastedTexts = textFields.map(field => field.value).filter(text => text.trim() !== '');
+    const youtubeLinks = linkFields.map(field => field.value).filter(link => link.trim() !== '');
+    
     createDnaMutation.mutate({
       files: uploadedFiles,
-      pastedTexts: data.pastedTexts,
-      youtubeLinks: data.youtubeLinks,
+      pastedTexts,
+      youtubeLinks,
       personalDescription: data.personalDescription,
     });
   };
@@ -304,20 +358,45 @@ export default function MyDNAPage() {
                       Pregações em Texto (até 5)
                     </h4>
                     <div className="space-y-4">
-                      {[0, 1, 2, 3, 4].map((index) => (
-                        <div key={index}>
-                          <Label htmlFor={`text-${index}`} className="text-sm font-medium text-gray-700">
+                      {textFields.map((field, index) => (
+                        <div key={field.id} className="relative">
+                          <Label htmlFor={`text-${field.id}`} className="text-sm font-medium text-gray-700">
                             Pregação {index + 1}
                           </Label>
-                          <Textarea
-                            id={`text-${index}`}
-                            rows={4}
-                            placeholder="Cole aqui o texto completo de uma pregação sua..."
-                            {...register(`pastedTexts.${index}` as const)}
-                            className="mt-1"
-                          />
+                          <div className="flex gap-2">
+                            <Textarea
+                              id={`text-${field.id}`}
+                              rows={4}
+                              placeholder="Cole aqui o texto completo de uma pregação sua..."
+                              value={field.value}
+                              onChange={(e) => updateTextField(field.id, e.target.value)}
+                              className="mt-1 flex-1"
+                            />
+                            {textFields.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeTextField(field.id)}
+                                className="mt-1 text-red-500 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
+                      {textFields.length < 5 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={addTextField}
+                          className="w-full border-dashed"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Adicionar Pregação
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -328,20 +407,45 @@ export default function MyDNAPage() {
                       Links do YouTube (até 3)
                     </h4>
                     <div className="space-y-4">
-                      {[0, 1, 2].map((index) => (
-                        <div key={index}>
-                          <Label htmlFor={`youtube-${index}`} className="text-sm font-medium text-gray-700">
+                      {linkFields.map((field, index) => (
+                        <div key={field.id} className="relative">
+                          <Label htmlFor={`youtube-${field.id}`} className="text-sm font-medium text-gray-700">
                             Link {index + 1}
                           </Label>
-                          <Input
-                            id={`youtube-${index}`}
-                            type="url"
-                            placeholder="https://youtube.com/watch?v=..."
-                            {...register(`youtubeLinks.${index}` as const)}
-                            className="mt-1"
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              id={`youtube-${field.id}`}
+                              type="url"
+                              placeholder="https://youtube.com/watch?v=..."
+                              value={field.value}
+                              onChange={(e) => updateLinkField(field.id, e.target.value)}
+                              className="mt-1 flex-1"
+                            />
+                            {linkFields.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeLinkField(field.id)}
+                                className="mt-1 text-red-500 hover:text-red-700"
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
+                      {linkFields.length < 3 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={addLinkField}
+                          className="w-full border-dashed"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Adicionar Link do YouTube
+                        </Button>
+                      )}
                     </div>
                   </div>
 
