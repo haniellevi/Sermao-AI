@@ -97,7 +97,7 @@ export default function DashboardPage() {
                   <Clock className="w-8 h-8 text-emerald-600" />
                 </div>
                 <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                  {sermonsData?.sermons?.length || 0} sermões
+                  {Array.isArray(sermonsData) ? sermonsData.length : 0} sermões
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Histórico</h3>
@@ -115,7 +115,7 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Atividade Recente</h3>
             <div className="space-y-3">
-              {sermonsData?.sermons?.slice(0, 3).map((sermon: any) => (
+              {Array.isArray(sermonsData) && sermonsData.slice(0, 3).map((sermon: any) => (
                 <div key={sermon.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
                   <div className="bg-primary/10 rounded-full p-2 mr-3">
                     <FileText className="w-4 h-4 text-primary" />
