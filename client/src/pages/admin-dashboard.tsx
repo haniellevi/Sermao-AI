@@ -23,9 +23,10 @@ import {
   Trash2,
   Eye,
   UserX,
-  UserCheck
+  UserCheck,
+  ArrowLeft
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 interface AdminStats {
   users: {
@@ -67,6 +68,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [, setLocation] = useLocation();
 
   // Check if user is admin
   useEffect(() => {
@@ -204,13 +206,25 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Shield className="h-8 w-8 text-blue-600" />
-          Painel Administrativo
-        </h1>
-        <p className="text-muted-foreground">
-          Gerenciamento completo do sistema de geração de sermões
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+              <Shield className="h-8 w-8 text-blue-600" />
+              Painel Administrativo
+            </h1>
+            <p className="text-muted-foreground">
+              Gerenciamento completo do sistema de geração de sermões
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/dashboard')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

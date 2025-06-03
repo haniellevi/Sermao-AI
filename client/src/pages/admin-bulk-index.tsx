@@ -18,11 +18,11 @@ interface UploadResult {
 }
 
 export default function AdminBulkIndexPage() {
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<UploadResult[]>([]);
-  const { user } = useAuthContext();
+  const [isDragOver, setIsDragOver] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -35,13 +35,37 @@ export default function AdminBulkIndexPage() {
     );
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFiles(e.target.files);
-    setResults([]);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setSelectedFiles(files);
+      setResults([]);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(files);
+      setResults([]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
   };
 
   const handleUpload = async () => {
-    if (!files || files.length === 0) {
+    if (!selectedFiles || selectedFiles.length === 0) {
       toast({
         title: "Erro",
         description: "Selecione pelo menos um arquivo para upload",
@@ -55,7 +79,7 @@ export default function AdminBulkIndexPage() {
     setResults([]);
 
     const formData = new FormData();
-    Array.from(files).forEach((file) => {
+    Array.from(selectedFiles).forEach((file) => {
       formData.append('documents', file);
     });
 
@@ -106,7 +130,7 @@ export default function AdminBulkIndexPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar ao Painel Admin
           </Button>
-          
+
           <h1 className="text-3xl font-bold mb-2">Indexação em Lote RAG</h1>
           <p className="text-muted-foreground">
             Faça upload de múltiplos documentos para indexação automática na base de conhecimento
@@ -121,10 +145,33 @@ export default function AdminBulkIndexPage() {
                 Upload de Documentos
               </CardTitle>
               <CardDescription>
-                Selecione arquivos .txt, .pdf, .docx ou .md para indexação. Máximo 20 arquivos por vez.
+                Arraste arquivos aqui ou selecione arquivos .txt, .pdf, .docx ou .md para indexação. Máximo 20 arquivos por vez.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDragOver 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-300 hover:border-gray-400'
+                } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <div className="space-y-2">
+                  <Upload className="h-12 w-12 mx-auto text-gray-400" />
+                  <div>
+                    <p className="text-lg font-medium">
+                      {isDragOver ? 'Solte os arquivos aqui' : 'Arraste arquivos aqui'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      ou clique no botão abaixo para selecionar
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="documents">Documentos</Label>
                 <Input
@@ -132,17 +179,17 @@ export default function AdminBulkIndexPage() {
                   type="file"
                   multiple
                   accept=".txt,.pdf,.docx,.md"
-                  onChange={handleFileChange}
+                  onChange={handleFileSelect}
                   disabled={uploading}
                   className="mt-1"
                 />
               </div>
 
-              {files && files.length > 0 && (
+              {selectedFiles && selectedFiles.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Arquivos selecionados ({files.length}):</p>
+                  <p className="text-sm font-medium">Arquivos selecionados ({selectedFiles.length}):</p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
-                    {Array.from(files).map((file, index) => (
+                    {Array.from(selectedFiles).map((file, index) => (
                       <div key={index} className="flex items-center text-sm text-muted-foreground">
                         <FileText className="h-4 w-4 mr-2" />
                         {file.name} ({(file.size / 1024).toFixed(1)} KB)
@@ -164,7 +211,7 @@ export default function AdminBulkIndexPage() {
 
               <Button 
                 onClick={handleUpload} 
-                disabled={uploading || !files || files.length === 0}
+                disabled={uploading || !selectedFiles || selectedFiles.length === 0}
                 className="w-full"
               >
                 {uploading ? 'Processando...' : 'Iniciar Upload e Indexação'}

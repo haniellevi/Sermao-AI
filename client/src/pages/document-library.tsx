@@ -19,6 +19,7 @@ export default function DocumentLibrary() {
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Fetch RAG statistics
   const { data: stats, isLoading: statsLoading } = useQuery<RagStats>({
@@ -32,7 +33,7 @@ export default function DocumentLibrary() {
       Array.from(files).forEach(file => {
         formData.append('documents', file);
       });
-      
+
       return apiUpload("/api/rag/upload", formData);
     },
     onSuccess: (data) => {
@@ -102,6 +103,27 @@ export default function DocumentLibrary() {
     }
   };
 
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-8">
@@ -154,22 +176,45 @@ export default function DocumentLibrary() {
             Upload de Documentos
           </CardTitle>
           <CardDescription>
-            Faça upload de documentos em formato texto (.txt) para enriquecer seus sermões
+            Arraste documentos aqui ou selecione arquivos para enriquecer a base de conhecimento dos sermões
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+              isDragOver 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-300 hover:border-gray-400'
+            } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            <div className="space-y-2">
+              <Upload className="h-8 w-8 mx-auto text-gray-400" />
+              <div>
+                <p className="font-medium">
+                  {isDragOver ? 'Solte os arquivos aqui' : 'Arraste documentos aqui'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  ou clique no botão abaixo para selecionar
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="document-upload">Selecionar Documentos</Label>
             <Input
               id="document-upload"
               type="file"
               multiple
-              accept=".txt"
+              accept=".txt,.pdf,.docx"
               onChange={handleFileSelect}
-              className="mt-1"
+              disabled={isUploading}
+              className="cursor-pointer"
             />
-            <p className="text-sm text-muted-foreground mt-1">
-              Formatos aceitos: .txt (máximo 10 arquivos)
+            <p className="text-sm text-muted-foreground mt-2">
+              Aceita arquivos TXT, PDF e DOCX (máximo 10 arquivos)
             </p>
           </div>
 
