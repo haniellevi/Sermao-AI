@@ -531,54 +531,103 @@ export default function MyDNAPage() {
                 <div className="bg-gray-50 rounded-lg p-6">
                   {dnaData.activeProfile.type === "customizado" && dnaData.activeProfile.customAttributes ? (
                     <div className="space-y-6">
-                      {/* Características principais */}
-                      {dnaData.activeProfile.customAttributes.teologia && (
+                      {/* Linguagem Verbal */}
+                      {dnaData.activeProfile.customAttributes.linguagemVerbal && (
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                             <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                            Abordagem Teológica
+                            Linguagem Verbal
                           </h3>
-                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.teologia}</p>
+                          <div className="space-y-3">
+                            {Object.entries(dnaData.activeProfile.customAttributes.linguagemVerbal).map(([key, value]) => (
+                              <div key={key} className="bg-white p-3 rounded-lg">
+                                <div className="text-sm font-medium text-gray-600 mb-1 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </div>
+                                <div className="text-gray-700">{value}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
-                      {dnaData.activeProfile.customAttributes.estilo && (
+                      {/* Tom e Comunicação */}
+                      {dnaData.activeProfile.customAttributes.tomEComunicacao && (
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                            Estilo de Pregação
+                            Tom e Comunicação
                           </h3>
-                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.estilo}</p>
+                          <div className="space-y-3">
+                            {Object.entries(dnaData.activeProfile.customAttributes.tomEComunicacao).map(([key, value]) => (
+                              <div key={key} className="bg-white p-3 rounded-lg">
+                                <div className="text-sm font-medium text-gray-600 mb-1 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </div>
+                                <div className="text-gray-700">{value}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
-                      {dnaData.activeProfile.customAttributes.audiencia && (
+                      {/* Estrutura e Estilo Homilético */}
+                      {dnaData.activeProfile.customAttributes.estruturaESiloHomiletico && (
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                             <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
-                            Conexão com a Audiência
+                            Estrutura e Estilo Homilético
                           </h3>
-                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.audiencia}</p>
+                          <div className="space-y-3">
+                            {Object.entries(dnaData.activeProfile.customAttributes.estruturaESiloHomiletico).map(([key, value]) => (
+                              <div key={key} className="bg-white p-3 rounded-lg">
+                                <div className="text-sm font-medium text-gray-600 mb-1 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </div>
+                                <div className="text-gray-700">{value}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
-                      {dnaData.activeProfile.customAttributes.linguagem && (
+                      {/* Linha Teológica e Interpretativa */}
+                      {dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa && (
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                             <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                            Linguagem e Comunicação
+                            Linha Teológica e Interpretativa
                           </h3>
-                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.linguagem}</p>
+                          <div className="space-y-3">
+                            {Object.entries(dnaData.activeProfile.customAttributes.linhaTeologicaEInterpretativa).map(([key, value]) => (
+                              <div key={key} className="bg-white p-3 rounded-lg">
+                                <div className="text-sm font-medium text-gray-600 mb-1 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </div>
+                                <div className="text-gray-700">{value}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
 
-                      {dnaData.activeProfile.customAttributes.estrutura && (
+                      {/* Recursos Retóricos e Didáticos */}
+                      {dnaData.activeProfile.customAttributes.recursosRetoricosEDidaticos && (
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                             <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
-                            Estrutura e Organização
+                            Recursos Retóricos e Didáticos
                           </h3>
-                          <p className="text-gray-700 bg-white p-3 rounded-lg">{dnaData.activeProfile.customAttributes.estrutura}</p>
+                          <div className="space-y-3">
+                            {Object.entries(dnaData.activeProfile.customAttributes.recursosRetoricosEDidaticos).map(([key, value]) => (
+                              <div key={key} className="bg-white p-3 rounded-lg">
+                                <div className="text-sm font-medium text-gray-600 mb-1 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                </div>
+                                <div className="text-gray-700">{value}</div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
