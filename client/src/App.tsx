@@ -32,7 +32,7 @@ function Router() {
       <Route path="/sermon-result/:id" component={SermonResultPage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/edit-sermon/:id" component={EditSermonPage} />
-      <Route path="/admin" component={AdminPage} />
+
       <Route component={NotFound} />
     </Switch>
   );
