@@ -194,6 +194,22 @@ const processDNA = async (
       contentForAnalysis += 'DESCRIÇÃO PESSOAL DO PREGADOR:\n' + personalDescription + '\n\n';
     }
 
+    // Get enhanced context from RAG service for DNA analysis
+    const ragContextQuery = `análise homilética estilo pregação teologia pastoral ${personalDescription}`;
+    const ragContext = await ragService.getEnhancedContext(userId, ragContextQuery, '');
+    
+    let ragContextForDNA = '';
+    if (ragContext && ragContext.trim()) {
+      ragContextForDNA = `
+CONTEXTO TEOLÓGICO E HOMILÉTICO DA BASE DE CONHECIMENTO:
+Esta informação complementar será usada para enriquecer a análise do DNA do pregador, fornecendo insights teológicos e homiléticos relevantes.
+
+${ragContext}
+
+---
+`;
+    }
+
     // Add pasted texts
     if (pastedTexts.length > 0) {
       contentForAnalysis += 'TEXTOS FORNECIDOS:\n' + pastedTexts.join('\n\n') + '\n\n';
@@ -297,8 +313,16 @@ const processDNA = async (
 
     // Create user message content with DNA analysis request
     const userMessageContent = `
+${ragContextForDNA}
 CONTEÚDO PARA ANÁLISE:
 ${contentForAnalysis}
+
+INSTRUÇÕES PARA USO DO CONTEXTO RAG:
+Use o contexto teológico e homilético fornecido acima para:
+1. Enriquecer a análise das características do pregador
+2. Identificar padrões teológicos e homiléticos mais precisos
+3. Fazer comparações com estilos e abordagens mencionados no contexto
+4. Fornecer análises mais profundas e fundamentadas
 
 Formato de Saída (JSON - Estritamente neste formato):
 Seu retorno DEVE ser um objeto JSON, estritamente no formato abaixo. Seja o mais detalhado e descritivo possível em cada campo. Se uma característica não for identificável, use "Não identificável" ou "Pouco evidente", mas esforce-se para inferir.
