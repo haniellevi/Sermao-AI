@@ -159,46 +159,92 @@ const processDNA = async (
     }
 
     const dnaPrompt = `
-Você é um Agente Especialista em Análise de Estilo Homilético e Teológico com a função crítica de criar um perfil DNA de pregação personalizado.
+Você é um **Agente Especialista em Análise de Estilo Homilético e Teológico**, com a função crítica de criar um perfil abrangente e altamente descritivo do "DNA do Pregador" a partir de textos e transcrições de pregações. Seu objetivo é identificar as características mais sutis e únicas da comunicação do pregador, destilando um perfil tão preciso que outro agente de IA possa replicar seu estilo com fidelidade. Seja o mais específico e descritivo possível.
 
 CONTEÚDO PARA ANÁLISE:
 ${contentForAnalysis}
 
-TAREFA: Analise profundamente o conteúdo fornecido e crie um perfil DNA detalhado nas seguintes categorias:
+Sua tarefa é extrair e detalhar os seguintes atributos, apresentando-os em um formato JSON estritamente definido. A profundidade da sua análise é fundamental.
 
-1. TEOLOGIA E DOUTRINA:
-- Linha teológica predominante
-- Ênfases doutrinárias específicas
-- Abordagem hermenêutica
-- Visão de aplicação bíblica
+### ATRIBUTOS A ANALISAR E DETALHAR:
 
-2. ESTILO HOMILÉTICO:
-- Tipo de pregação (expositiva, temática, textual)
-- Uso de ilustrações e analogias
-- Ritmo e dinâmica da pregação
-- Elementos retóricos característicos
+#### 1. LINGUAGEM VERBAL
+- **Formalidade:** (Ex: "Altamente formal e acadêmica, com uso de português culto", "Conversacional e informal, como uma conversa de amigo")
+- **Vocabulário:** (Ex: "Extenso e erudito, com predileção por vocábulos menos comuns", "Simples e direto, visando clareza máxima")
+- **Palavras-chave/Frases-efeito:** (Ex: "Repete frequentemente 'Graça de Deus é tudo'", "Utiliza metáforas militares com frequência")
+- **Clareza/Precisão:** (Ex: "Linguagem cristalina, conceitos complexos explicados com analogias simples")
+- **Sintaxe Frasal:** (Ex: "Frases longas e complexas, com múltiplas subordinações", "Frases curtas, diretas e impactantes")
+- **Ritmo da Fala:** (Ex: "Pausado e reflexivo, com ênfase nas palavras-chave", "Acelerado e enérgico, transmitindo urgência")
 
-3. PERFIL DA AUDIÊNCIA:
-- Tipo de congregação alvo
-- Nível de maturidade espiritual presumido
-- Contexto cultural e social
-- Necessidades pastorais identificadas
+#### 2. TOM E COMUNICAÇÃO
+- **Tom Geral:** (Ex: "Inspirador e encorajador, com um calor pastoral evidente", "Confrontador e desafiador, sem ser agressivo")
+- **Nível de Paixão/Intensidade:** (Ex: "Transborda paixão e fervor, com elevações de voz", "Calmo e ponderado, transmitindo autoridade serena")
+- **Uso de Perguntas Retóricas:** (Ex: "Frequentemente utiliza perguntas perspicazes para engajar", "Pouco uso, preferindo afirmações diretas")
+- **Chamadas à Ação:** (Ex: "Chamadas à ação diretas, frequentes e urgentes", "Mais focado na reflexão e transformação gradual")
 
-4. LINGUAGEM E COMUNICAÇÃO:
-- Registro linguístico (formal, informal, coloquial)
-- Uso de termos técnicos teológicos
-- Clareza e acessibilidade
-- Elementos de persuasão
+#### 3. ESTRUTURA E ESTILO HOMILÉTICO
+- **Estilo Principal:** (Ex: "Expositivo predominante, desdobrando o texto quase verso a verso", "Temático, mas com forte exegese")
+- **Introdução:** (Ex: "Começa com uma história pessoal ou ilustração cativante", "Inicia com uma pergunta impactante")
+- **Desenvolvimento/Corpo:** (Ex: "Claro desenvolvimento em 3 a 5 pontos principais, numerados", "Desenvolvimento fluído, sem pontos numerados óbvios")
+- **Transições:** (Ex: "Transições suaves e lógicas entre os pontos", "Transições abruptas e rápidas para manter energia")
+- **Conclusão:** (Ex: "Recapitula pontos principais e faz um apelo final forte", "Termina com uma oração ou benção profunda")
+- **Uso de Ilustrações/Analogias:** (Ex: "Abundante em histórias e analogias da vida real", "Foca mais na explicação do texto")
 
-5. ESTRUTURA E ORGANIZAÇÃO:
-- Padrão de organização de conteúdo
-- Uso de esquemas e divisões
-- Transições entre pontos
-- Conclusões e apelos característicos
+#### 4. LINHA TEOLÓGICA E INTERPRETATIVA
+- **Ênfases Doutrinárias:** (Ex: "Forte ênfase na soberania de Deus e eleição", "Foca na graça e no perdão como fundamentos")
+- **Abordagem Hermenêutica:** (Ex: "Prioriza a interpretação histórico-gramatical do texto", "Usa interpretações alegóricas ou tipológicas")
+- **Fontes de Autoridade:** (Ex: "Foco exclusivo na Bíblia como única regra de fé", "Referências frequentes a teólogos históricos")
+- **Visão Geral:** (Ex: "Teologia Reformada/Calvinista, com ênfase na glória de Deus", "Arminiana, focando na liberdade humana")
 
-FORMATO DE RESPOSTA: Retorne APENAS um objeto JSON válido com as chaves: teologia, estilo, audiencia, linguagem, estrutura. Cada valor deve ser uma string descritiva de 1-2 frases.
+#### 5. RECURSOS RETÓRICOS E DIDÁTICOS
+- **Figuras de Linguagem:** (Ex: "Uso frequente e elaborado de metáforas, símiles e parábolas", "Anáforas e repetições de frases para criar ritmo")
+- **Uso de Humor:** (Ex: "Utiliza humor inteligente e relevante, que serve à mensagem", "Sério e direto, com pouco ou nenhum uso de humor")
+- **Interação com Audiência:** (Ex: "Faz perguntas diretas à audiência, incentivando reflexão", "Pouca interação direta, estilo mais expositivo unidirecional")
+- **Didática Específica:** (Ex: "Usa acrônimos ou mnemônicos para facilitar memorização", "Faz resumos periódicos para reforçar aprendizagem")
+- **Linguagem Inclusiva:** (Ex: "Usa linguagem neutra de gênero quando apropriado", "Linguagem mais tradicional, focada em pronomes distintos")
 
-Seja preciso, objetivo e baseie-se exclusivamente no conteúdo analisado.
+FORMATO DE SAÍDA (JSON - Estritamente neste formato):
+Seu retorno DEVE ser um objeto JSON, estritamente no formato abaixo. Seja o mais detalhado e descritivo possível em cada campo. Se uma característica não for identificável, use "Não identificável" ou "Pouco evidente", mas esforce-se para inferir.
+
+{
+  "linguagemVerbal": {
+    "formalidade": "string",
+    "vocabulario": "string", 
+    "palavrasChaveFrasesEfeito": "string",
+    "clarezaPrecisao": "string",
+    "sintaxeFrasal": "string",
+    "ritmoDaFala": "string"
+  },
+  "tomEComunicacao": {
+    "tomGeral": "string",
+    "nivelPaixaoIntensidade": "string", 
+    "usoPerguntasRetoricas": "string",
+    "chamadasAcao": "string"
+  },
+  "estruturaESiloHomiletico": {
+    "estiloPrincipal": "string",
+    "introducao": "string",
+    "desenvolvimentoCorpo": "string", 
+    "transicoes": "string",
+    "conclusao": "string",
+    "usoIlustracoesAnalogias": "string"
+  },
+  "linhaTeologicaEInterpretativa": {
+    "enfasesDoutrinarias": "string",
+    "abordagemHermeneutica": "string",
+    "fontesAutoridade": "string", 
+    "visaoGeral": "string"
+  },
+  "recursosRetoricosEDidaticos": {
+    "figurasLinguagem": "string",
+    "usoHumor": "string",
+    "interacaoAudiencia": "string",
+    "didaticaEspecifica": "string", 
+    "linguagemInclusiva": "string"
+  }
+}
+
+Retorne APENAS o JSON, sem texto adicional antes ou depois.
 `;
 
     const dnaResponse = await callGemini(dnaPrompt);
@@ -219,11 +265,41 @@ Seja preciso, objetivo e baseie-se exclusivamente no conteúdo analisado.
       console.error('Erro ao processar resposta da IA:', parseError);
       console.error('Resposta original da IA:', dnaResponse);
       return {
-        teologia: "Análise teológica baseada no conteúdo fornecido",
-        estilo: "Estilo homilético identificado no material",
-        audiencia: "Perfil de audiência inferido do conteúdo",
-        linguagem: "Padrão linguístico observado",
-        estrutura: "Estrutura organizacional característica"
+        linguagemVerbal: {
+          formalidade: "Análise baseada no conteúdo fornecido",
+          vocabulario: "Vocabulário identificado no material",
+          palavrasChaveFrasesEfeito: "Frases características observadas",
+          clarezaPrecisao: "Padrão de clareza identificado",
+          sintaxeFrasal: "Estrutura frasal observada",
+          ritmoDaFala: "Ritmo comunicativo identificado"
+        },
+        tomEComunicacao: {
+          tomGeral: "Tom pastoral identificado no conteúdo",
+          nivelPaixaoIntensidade: "Intensidade observada na comunicação",
+          usoPerguntasRetoricas: "Padrão de engajamento identificado",
+          chamadasAcao: "Estilo de apelos observado"
+        },
+        estruturaESiloHomiletico: {
+          estiloPrincipal: "Estilo homilético identificado no material",
+          introducao: "Padrão de introdução observado",
+          desenvolvimentoCorpo: "Estrutura de desenvolvimento identificada",
+          transicoes: "Padrão de transições observado",
+          conclusao: "Estilo de conclusão identificado",
+          usoIlustracoesAnalogias: "Uso de ilustrações observado"
+        },
+        linhaTeologicaEInterpretativa: {
+          enfasesDoutrinarias: "Ênfases teológicas identificadas",
+          abordagemHermeneutica: "Abordagem interpretativa observada",
+          fontesAutoridade: "Fontes de autoridade identificadas",
+          visaoGeral: "Perspectiva teológica geral identificada"
+        },
+        recursosRetoricosEDidaticos: {
+          figurasLinguagem: "Recursos linguísticos observados",
+          usoHumor: "Padrão de humor identificado",
+          interacaoAudiencia: "Estilo de interação observado",
+          didaticaEspecifica: "Métodos didáticos identificados",
+          linguagemInclusiva: "Padrão de linguagem observado"
+        }
       };
     }
   } catch (error) {
@@ -238,13 +314,45 @@ const generateSermonWithAI = async (request: any): Promise<any> => {
     const { theme, purpose, audience, duration, style, context, referenceUrls, dnaType, activeDnaProfile } = request;
 
     const dnaContext = activeDnaProfile && dnaType === 'customizado' ? `
-PERFIL DNA DO PREGADOR:
-- Teologia: ${activeDnaProfile.customAttributes?.teologia || 'Não especificado'}
-- Estilo: ${activeDnaProfile.customAttributes?.estilo || 'Não especificado'}  
-- Audiência: ${activeDnaProfile.customAttributes?.audiencia || 'Não especificado'}
-- Linguagem: ${activeDnaProfile.customAttributes?.linguagem || 'Não especificado'}
-- Estrutura: ${activeDnaProfile.customAttributes?.estrutura || 'Não especificado'}
-` : 'PERFIL DNA: Padrão equilibrado e versátil';
+PERFIL DNA DO PREGADOR (Análise Detalhada):
+
+### LINGUAGEM VERBAL:
+- Formalidade: ${activeDnaProfile.customAttributes?.linguagemVerbal?.formalidade || 'Não especificado'}
+- Vocabulário: ${activeDnaProfile.customAttributes?.linguagemVerbal?.vocabulario || 'Não especificado'}
+- Palavras-chave/Frases-efeito: ${activeDnaProfile.customAttributes?.linguagemVerbal?.palavrasChaveFrasesEfeito || 'Não especificado'}
+- Clareza/Precisão: ${activeDnaProfile.customAttributes?.linguagemVerbal?.clarezaPrecisao || 'Não especificado'}
+- Sintaxe Frasal: ${activeDnaProfile.customAttributes?.linguagemVerbal?.sintaxeFrasal || 'Não especificado'}
+- Ritmo da Fala: ${activeDnaProfile.customAttributes?.linguagemVerbal?.ritmoDaFala || 'Não especificado'}
+
+### TOM E COMUNICAÇÃO:
+- Tom Geral: ${activeDnaProfile.customAttributes?.tomEComunicacao?.tomGeral || 'Não especificado'}
+- Nível de Paixão/Intensidade: ${activeDnaProfile.customAttributes?.tomEComunicacao?.nivelPaixaoIntensidade || 'Não especificado'}
+- Uso de Perguntas Retóricas: ${activeDnaProfile.customAttributes?.tomEComunicacao?.usoPerguntasRetoricas || 'Não especificado'}
+- Chamadas à Ação: ${activeDnaProfile.customAttributes?.tomEComunicacao?.chamadasAcao || 'Não especificado'}
+
+### ESTRUTURA E ESTILO HOMILÉTICO:
+- Estilo Principal: ${activeDnaProfile.customAttributes?.estruturaESiloHomiletico?.estiloPrincipal || 'Não especificado'}
+- Introdução: ${activeDnaProfile.customAttributes?.estruturaESiloHomiletico?.introducao || 'Não especificado'}
+- Desenvolvimento/Corpo: ${activeDnaProfile.customAttributes?.estruturaESiloHomiletico?.desenvolvimentoCorpo || 'Não especificado'}
+- Transições: ${activeDnaProfile.customAttributes?.estruturaESiloHomiletico?.transicoes || 'Não especificado'}
+- Conclusão: ${activeDnaProfile.customAttributes?.estruturaESiloHomiletico?.conclusao || 'Não especificado'}
+- Uso de Ilustrações/Analogias: ${activeDnaProfile.customAttributes?.estruturaESiloHomiletico?.usoIlustracoesAnalogias || 'Não especificado'}
+
+### LINHA TEOLÓGICA E INTERPRETATIVA:
+- Ênfases Doutrinárias: ${activeDnaProfile.customAttributes?.linhaTeologicaEInterpretativa?.enfasesDoutrinarias || 'Não especificado'}
+- Abordagem Hermenêutica: ${activeDnaProfile.customAttributes?.linhaTeologicaEInterpretativa?.abordagemHermeneutica || 'Não especificado'}
+- Fontes de Autoridade: ${activeDnaProfile.customAttributes?.linhaTeologicaEInterpretativa?.fontesAutoridade || 'Não especificado'}
+- Visão Geral: ${activeDnaProfile.customAttributes?.linhaTeologicaEInterpretativa?.visaoGeral || 'Não especificado'}
+
+### RECURSOS RETÓRICOS E DIDÁTICOS:
+- Figuras de Linguagem: ${activeDnaProfile.customAttributes?.recursosRetoricosEDidaticos?.figurasLinguagem || 'Não especificado'}
+- Uso de Humor: ${activeDnaProfile.customAttributes?.recursosRetoricosEDidaticos?.usoHumor || 'Não especificado'}
+- Interação com Audiência: ${activeDnaProfile.customAttributes?.recursosRetoricosEDidaticos?.interacaoAudiencia || 'Não especificado'}
+- Didática Específica: ${activeDnaProfile.customAttributes?.recursosRetoricosEDidaticos?.didaticaEspecifica || 'Não especificado'}
+- Linguagem Inclusiva: ${activeDnaProfile.customAttributes?.recursosRetoricosEDidaticos?.linguagemInclusiva || 'Não especificado'}
+
+ADERÊNCIA RIGOROSA: O sermão deve incorporar TODAS as características identificadas acima, replicando fielmente o estilo único deste pregador.
+` : 'PERFIL DNA: Padrão equilibrado e versátil - pastor batista bem embasado, focado no ensino bíblico com aplicação prática';
 
     const sermonPrompt = `
 Você é um **Agente Homilético Teológico e Pastoral Especialista**. Sua essência é a fusão de:
