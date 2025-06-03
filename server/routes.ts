@@ -290,7 +290,7 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 
     try {
       // Clean the response to remove markdown formatting
-      let cleanedResponse = dnaResponse.trim();
+      let cleanedResponse = response.trim();
 
       // Remove markdown code block markers
       if (cleanedResponse.startsWith('```json')) {
@@ -302,7 +302,7 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
       return JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error('Erro ao processar resposta da IA:', parseError);
-      console.error('Resposta original da IA:', dnaResponse);
+      console.error('Resposta original da IA:', response);
       return {
         linguagemVerbal: {
           formalidade: "Análise baseada no conteúdo fornecido",
