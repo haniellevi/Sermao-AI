@@ -62,6 +62,18 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// RAG chunks table for storing document embeddings
+export const ragChunks = pgTable("rag_chunks", {
+  id: serial("id").primaryKey(),
+  documentId: varchar("document_id", { length: 255 }).notNull(),
+  chunkText: text("chunk_text").notNull(),
+  embeddingVector: text("embedding_vector").notNull(), // JSON string of float array
+  sourceUrl: varchar("source_url", { length: 500 }),
+  pageNumber: integer("page_number"),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas with password validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -89,6 +101,11 @@ export const insertSermonSchema = createInsertSchema(sermons).omit({
 });
 
 export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRagChunkSchema = createInsertSchema(ragChunks).omit({
   id: true,
   createdAt: true,
 });
@@ -145,6 +162,8 @@ export type Sermon = typeof sermons.$inferSelect;
 export type InsertSermon = z.infer<typeof insertSermonSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type RagChunk = typeof ragChunks.$inferSelect;
+export type InsertRagChunk = z.infer<typeof insertRagChunkSchema>;
 
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;

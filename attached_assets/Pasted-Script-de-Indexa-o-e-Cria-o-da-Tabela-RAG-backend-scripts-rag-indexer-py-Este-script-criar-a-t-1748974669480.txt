@@ -1,0 +1,56 @@
+Script de Indexação e Criação da Tabela RAG (backend/scripts/rag_indexer.py)
+
+Este script criará a tabela rag_chunks e a preencherá no seu Supabase.
+
+Crie/Atualize backend/scripts/rag_indexer.py:
+
+Ação: Cole o código completo do rag_indexer.py que forneci anteriormente.
+Pequena Adaptação: No bloco if __name__ == "__main__":, no código SQL para criar a tabela rag_chunks, certifique-se de que o tipo VECTOR tenha a dimensão correta. O text-embedding-004 (o modelo de embedding do Gemini) geralmente produz vetores de 768 dimensões.
+SQL
+
+# backend/scripts/rag_indexer.py (trecho para CREATE TABLE)
+# ...
+        session.execute(text("""
+            CREATE TABLE IF NOT EXISTS rag_chunks (
+                id SERIAL PRIMARY KEY,
+                document_id VARCHAR(255) NOT NULL,
+                chunk_text TEXT NOT NULL,
+                embedding_vector VECTOR(768) NOT NULL, -- <--- Certifique-se que o 768 é a dimensão correta do seu embedding
+                source_url VARCHAR(255),
+                page_number INTEGER
+            );
+        """))
+# ...
+Executar o Script de Indexação:
+
+Ação: No terminal do Replit, execute: python backend/scripts/rag_indexer.py.
+Monitore os logs: Verifique se os documentos estão sendo carregados, os embeddings gerados e os chunks inseridos no seu banco de dados Supabase.
+Verifique no Supabase: Acesse o Dashboard do Supabase, vá em Table Editor (Editor de Tabelas) e veja se a tabela rag_chunks foi criada e se os dados estão lá.
+Fase 4: Implementar a Lógica de Recuperação (no backend/app/services.py)
+
+Modifique a função generate_sermonWithAI para buscar no banco de dados RAG antes de construir o prompt para o Gemini.
+
+Atualizar backend/app/services.py:
+
+Ação: Cole o código atualizado da generate_sermonWithAI e das funções auxiliares (generate_embedding_for_rag, retrieve_relevant_chunks) que eu forneci anteriormente.
+Importante: A sessão de banco de dados para o RAG deve usar a DATABASE_URL_RAG. Certifique-se de que a Session (do sessionmaker) ou RagSession esteja configurada para usar DATABASE_URL_RAG.
+Python
+
+# backend/app/services.py (trecho para RAG setup)
+# ...
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+from app.models import RagChunk # Importar o modelo RagChunk
+
+# Configuração da conexão com o banco de dados RAG (Supabase)
+DATABASE_URL_RAG = os.environ.get("DATABASE_URL_RAG")
+if not DATABASE_URL_RAG:
+    raise ValueError("DATABASE_URL_RAG não configurada nas variáveis de ambiente.")
+
+rag_engine = create_engine(DATABASE_URL_RAG)
+RagSession = sessionmaker(bind=rag_engine)
+
+# ... (Restante do código, incluindo generate_embedding_for_rag e retrieve_relevant_chunks) ...
+
+# Em retrieve_relevant_chunks, use RagSession() para a sessão:
+# session = RagSession()
