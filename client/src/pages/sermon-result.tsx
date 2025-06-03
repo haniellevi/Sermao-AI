@@ -116,15 +116,17 @@ export default function SermonResultPage() {
 
   const deleteSermonMutation = useMutation({
     mutationFn: async (sermonId: string) => {
+      const token = localStorage.getItem('token');
       const response = await fetch(`/api/sermons/${sermonId}`, {
         method: 'DELETE',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       });
       if (!response.ok) {
-        throw new Error('Falha ao excluir sermão');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Falha ao excluir sermão');
       }
       return response.json();
     },
