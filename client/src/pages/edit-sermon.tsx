@@ -28,16 +28,19 @@ export default function EditSermonPage() {
 
   useEffect(() => {
     if (sermonData) {
+      console.log('Sermon data received:', sermonData);
       setTitle(sermonData.title || '');
       
       try {
         const parsedContent = JSON.parse(sermonData.content);
+        console.log('Parsed content:', parsedContent);
         if (typeof parsedContent.sermao === 'string') {
           setContent(parsedContent.sermao);
         } else {
           setContent(sermonData.content);
         }
-      } catch {
+      } catch (error) {
+        console.log('Parse error:', error);
         setContent(sermonData.content || '');
       }
     }
@@ -45,13 +48,20 @@ export default function EditSermonPage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: { title: string; content: string }) => {
-      return await apiRequest(`/api/sermons/${sermonId}`, {
+      const response = await fetch(`/api/sermons/${sermonId}`, {
         method: 'PATCH',
-        body: JSON.stringify(data),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
+        body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao atualizar sermão');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
