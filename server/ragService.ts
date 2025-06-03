@@ -1,9 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { db } from "./db";
-import { ragChunks, type RagChunk } from "../shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from './db';
+import { ragChunks } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 interface SearchResult {
   chunkText: string;
@@ -14,145 +14,187 @@ interface SearchResult {
 class RagService {
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
+      console.log(`[RAG] Generating embedding for text of length: ${text.length}`);
+      
+      // Clean and truncate text if too long
+      const cleanText = text.replace(/\s+/g, ' ').trim();
+      const maxLength = 8000; // Gemini embedding limit
+      const truncatedText = cleanText.length > maxLength ? cleanText.substring(0, maxLength) : cleanText;
+      
+      if (truncatedText.length < 10) {
+        throw new Error('Texto muito curto para gerar embedding');
+      }
+
       const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-      const result = await model.embedContent(text);
+      const result = await model.embedContent(truncatedText);
+      
+      console.log(`[RAG] Embedding generated successfully: ${result.embedding.values.length} dimensions`);
       return result.embedding.values;
-    } catch (error) {
-      console.error('Error generating embedding:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[RAG] Error generating embedding:', error);
+      throw new Error(`Falha ao gerar embedding: ${error.message}`);
     }
   }
 
   private chunkText(text: string, chunkSize: number = 600, overlap: number = 50): string[] {
-    const chunks: string[] = [];
+    console.log(`[RAG] Chunking text of length: ${text.length} with chunk size: ${chunkSize}, overlap: ${overlap}`);
+    
+    // Clean text first
+    const cleanText = text
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (cleanText.length < 100) {
+      return [cleanText];
+    }
+
+    const chunks = [];
     let start = 0;
 
-    // Limit total chunks to prevent memory issues
-    const maxChunks = 100;
-    let chunkCount = 0;
-
-    while (start < text.length && chunkCount < maxChunks) {
-      const end = Math.min(start + chunkSize, text.length);
-      const chunk = text.slice(start, end).trim();
+    // Try to break on sentence boundaries when possible
+    while (start < cleanText.length) {
+      let end = Math.min(start + chunkSize, cleanText.length);
       
-      // Only add non-empty chunks with meaningful content
-      if (chunk.length > 30) {
+      // If not at the end of text, try to find a good break point
+      if (end < cleanText.length) {
+        // Look for sentence endings within the last 200 characters
+        const searchStart = Math.max(end - 200, start);
+        const searchText = cleanText.slice(searchStart, end);
+        const sentenceEnd = searchText.lastIndexOf('. ');
+        
+        if (sentenceEnd > 0) {
+          end = searchStart + sentenceEnd + 1;
+        } else {
+          // Fallback to word boundary
+          const wordBoundary = cleanText.lastIndexOf(' ', end);
+          if (wordBoundary > start + chunkSize * 0.7) {
+            end = wordBoundary;
+          }
+        }
+      }
+      
+      const chunk = cleanText.slice(start, end).trim();
+      if (chunk.length > 50) { // Only include meaningful chunks
         chunks.push(chunk);
-        chunkCount++;
       }
       
       start = end - overlap;
-      
-      // Ensure we don't get stuck in infinite loop
-      if (start >= end) {
-        break;
-      }
+      if (start >= cleanText.length) break;
     }
 
+    console.log(`[RAG] Text chunked into ${chunks.length} chunks`);
     return chunks;
   }
 
   async storeDocument(userId: number, documentId: string, text: string, sourceUrl?: string): Promise<void> {
+    const startTime = Date.now();
+    const maxProcessingTime = 60000; // 60 seconds max
+    
     try {
-      console.log(`Storing document: ${documentId} for user: ${userId}`);
+      console.log(`[RAG] Starting document storage: ${documentId} for user: ${userId}`);
       
-      // Clean and validate text - remover caracteres problemáticos
-      let cleanText = text.trim();
-      
-      // Remove caracteres nulos e de controle que causam problemas no PostgreSQL
-      cleanText = cleanText
-        .replace(/\x00/g, '') // Remove null bytes
-        .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ') // Remove caracteres de controle
-        .replace(/\s+/g, ' ') // Normaliza espaços múltiplos
+      // Clean and validate text
+      const cleanText = text
+        .replace(/\0/g, '') // Remove null bytes
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
         .trim();
+        
+      console.log(`[RAG] Text length after cleaning: ${cleanText.length}`);
       
-      if (!cleanText || cleanText.length < 50) {
-        throw new Error('Documento muito pequeno ou vazio para indexação');
+      if (!cleanText || cleanText.length < 100) {
+        throw new Error('Documento muito pequeno ou vazio para indexação (mínimo 100 caracteres)');
       }
 
-      // Limit document size to prevent memory issues
-      const maxDocumentSize = 50000; // 50KB max per document
-      const processText = cleanText.length > maxDocumentSize 
-        ? cleanText.substring(0, maxDocumentSize) + '...[documento truncado]'
-        : cleanText;
+      // Check if document already exists
+      const existingChunks = await db.select().from(ragChunks).where(eq(ragChunks.documentId, documentId));
+      if (existingChunks.length > 0) {
+        console.log(`[RAG] Removing ${existingChunks.length} existing chunks for document: ${documentId}`);
+        await db.delete(ragChunks).where(eq(ragChunks.documentId, documentId));
+      }
 
-      const chunks = this.chunkText(processText, 600, 50); // Smaller chunks with less overlap
-      console.log(`Created ${chunks.length} chunks for document: ${documentId} (text size: ${processText.length} chars)`);
+      const chunks = this.chunkText(cleanText, 500, 30); // Smaller chunks for faster processing
+      console.log(`[RAG] Created ${chunks.length} chunks for document: ${documentId}`);
 
-      // Remove existing chunks for this document to avoid duplicates
-      await db.delete(ragChunks).where(eq(ragChunks.documentId, documentId));
+      let successfulChunks = 0;
+      const errors: string[] = [];
 
-      // Process chunks in smaller batches to prevent memory overflow
-      const batchSize = 5;
-      for (let batchStart = 0; batchStart < chunks.length; batchStart += batchSize) {
-        const batchEnd = Math.min(batchStart + batchSize, chunks.length);
-        const batchChunks = chunks.slice(batchStart, batchEnd);
-        
-        const currentBatch = Math.floor(batchStart / batchSize) + 1;
-        const totalBatches = Math.ceil(chunks.length / batchSize);
-        console.log(`Processing batch ${currentBatch}/${totalBatches} for ${documentId}`);
-        
-        for (let i = 0; i < batchChunks.length; i++) {
-          const chunkIndex = batchStart + i;
-          const chunk = batchChunks[i];
+      // Process chunks with timeout protection
+      for (let i = 0; i < chunks.length; i++) {
+        const currentTime = Date.now();
+        if (currentTime - startTime > maxProcessingTime) {
+          console.log(`[RAG] Processing timeout reached, stopping at chunk ${i + 1}/${chunks.length}`);
+          break;
+        }
+
+        const chunk = chunks[i];
+        try {
+          console.log(`[RAG] Processing chunk ${i + 1}/${chunks.length} (${chunk.length} chars)`);
           
-          try {
-            // Limpar chunk antes de processar
-            const cleanChunk = chunk
-              .replace(/\x00/g, '')
-              .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-            
-            if (cleanChunk.length < 30) {
-              console.log(`Skipping empty chunk ${chunkIndex + 1}`);
-              continue;
-            }
-            
-            // Add delay between embeddings to prevent rate limiting and memory buildup
-            if (chunkIndex > 0 && chunkIndex % 3 === 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-            
-            const embedding = await this.generateEmbedding(cleanChunk);
-            
-            await db.insert(ragChunks).values({
-              documentId: `${documentId}_chunk_${chunkIndex}`,
-              chunkText: cleanChunk,
-              embeddingVector: JSON.stringify(embedding),
-              sourceUrl: sourceUrl || null,
-              pageNumber: chunkIndex + 1,
-              userId: userId
-            });
-            
-            console.log(`✅ Stored chunk ${chunkIndex + 1}/${chunks.length} for ${documentId}`);
-          } catch (chunkError) {
-            console.error(`❌ Error storing chunk ${chunkIndex} for document ${documentId}:`, chunkError);
-            // Continue with other chunks even if one fails
+          const embedding = await this.generateEmbedding(chunk);
+          
+          await db.insert(ragChunks).values({
+            documentId: `${documentId}_chunk_${i}`,
+            chunkText: chunk,
+            embeddingVector: JSON.stringify(embedding),
+            sourceUrl: sourceUrl || null,
+            pageNumber: i + 1,
+            userId: userId
+          });
+          
+          console.log(`[RAG] ✓ Stored chunk ${i + 1}/${chunks.length}`);
+          successfulChunks++;
+          
+          // Small delay to prevent overwhelming the API
+          if (i % 3 === 0 && i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+        } catch (chunkError: any) {
+          console.error(`[RAG] ✗ Error storing chunk ${i + 1}:`, chunkError.message);
+          errors.push(`Chunk ${i + 1}: ${chunkError.message}`);
+          
+          // If too many consecutive errors, stop processing
+          if (errors.length > 5 && successfulChunks === 0) {
+            throw new Error('Muitos erros consecutivos no processamento');
           }
         }
-        
-        // Force garbage collection hint between batches
-        if (global.gc) {
-          global.gc();
-        }
       }
       
-      console.log(`Successfully stored document: ${documentId} with ${chunks.length} chunks`);
-    } catch (error) {
-      console.error('Error storing document:', error);
+      const elapsed = Date.now() - startTime;
+      console.log(`[RAG] Document storage completed in ${elapsed}ms`);
+      console.log(`[RAG] Successfully stored ${successfulChunks}/${chunks.length} chunks for document: ${documentId}`);
+      
+      if (successfulChunks === 0) {
+        throw new Error('Nenhum chunk foi processado com sucesso');
+      }
+      
+      if (errors.length > 0 && successfulChunks < Math.max(1, chunks.length * 0.5)) {
+        throw new Error(`Muitos erros durante o processamento: ${errors.slice(0, 3).join('; ')}`);
+      }
+      
+    } catch (error: any) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[RAG] Error storing document after ${elapsed}ms:`, error);
+      
+      if (elapsed > maxProcessingTime) {
+        throw new Error('Processamento demorou muito. Tente um arquivo menor.');
+      }
+      
       throw error;
     }
   }
 
   async searchSimilarChunks(query: string, limit: number = 5): Promise<SearchResult[]> {
     try {
-      console.log(`Searching for: "${query}" with limit: ${limit}`);
+      console.log(`[RAG] Searching for: "${query}" with limit: ${limit}`);
       const queryEmbedding = await this.generateEmbedding(query);
 
       // Get more chunks for better search results
       const allChunks = await db.select().from(ragChunks).limit(500);
-      console.log(`Found ${allChunks.length} chunks in database`);
+      console.log(`[RAG] Found ${allChunks.length} chunks in database`);
 
       const results: SearchResult[] = [];
 
@@ -170,7 +212,7 @@ class RagService {
             });
           }
         } catch (error) {
-          console.error('Error processing chunk:', error);
+          console.error('[RAG] Error processing chunk:', error);
         }
       }
 
@@ -178,107 +220,86 @@ class RagService {
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
       
-      console.log(`Returning ${sortedResults.length} similar chunks with similarities:`, 
-        sortedResults.map(r => r.similarity.toFixed(3)));
-      
+      console.log(`[RAG] Found ${sortedResults.length} relevant chunks`);
       return sortedResults;
-    } catch (error) {
-      console.error('Error searching chunks:', error);
-      return [];
+    } catch (error: any) {
+      console.error('[RAG] Error searching chunks:', error);
+      throw error;
     }
   }
 
   private cosineSimilarity(a: number[], b: number[]): number {
     if (a.length !== b.length) return 0;
-
+    
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-
+    
     for (let i = 0; i < a.length; i++) {
       dotProduct += a[i] * b[i];
       normA += a[i] * a[i];
       normB += b[i] * b[i];
     }
-
+    
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
   async getEnhancedContext(userId: number, theme: string, additionalContext: string): Promise<string> {
     try {
-      console.log(`Getting enhanced context for theme: "${theme}", additional: "${additionalContext}"`);
+      console.log(`[RAG] Getting enhanced context for user ${userId}, theme: ${theme}`);
       
-      // Create multiple search queries for better coverage
-      const searchQueries = [
-        `${theme} ${additionalContext}`.trim(),
-        theme,
-        additionalContext
-      ].filter(q => q.length > 0);
-
-      let allChunks: SearchResult[] = [];
+      // Search for relevant content using the theme and additional context
+      const searchQuery = `${theme} ${additionalContext}`.trim();
+      const relevantChunks = await this.searchSimilarChunks(searchQuery, 8);
       
-      // Search with each query and combine results
-      for (const query of searchQueries) {
-        if (query.length > 3) {
-          const chunks = await this.searchSimilarChunks(query, 5);
-          allChunks = allChunks.concat(chunks);
-        }
-      }
-
-      // Remove duplicates and keep highest similarity
-      const uniqueChunks = allChunks.reduce((acc, chunk) => {
-        const existing = acc.find(c => c.chunkText === chunk.chunkText);
-        if (!existing || existing.similarity < chunk.similarity) {
-          acc = acc.filter(c => c.chunkText !== chunk.chunkText);
-          acc.push(chunk);
-        }
-        return acc;
-      }, [] as SearchResult[]);
-
-      const topChunks = uniqueChunks
-        .sort((a, b) => b.similarity - a.similarity)
-        .slice(0, 4);
-
-      if (topChunks.length === 0) {
-        console.log('No relevant chunks found for enhanced context');
+      if (relevantChunks.length === 0) {
+        console.log('[RAG] No relevant chunks found');
         return '';
       }
-
-      console.log(`Found ${topChunks.length} relevant chunks for enhanced context`);
-
-      return topChunks
-        .map(chunk => chunk.chunkText)
-        .join('\n\n---\n\n');
-    } catch (error) {
-      console.error('Error getting enhanced context:', error);
+      
+      // Format the context with the most relevant chunks
+      const contextParts = relevantChunks.map((chunk, index) => {
+        return `[Referência ${index + 1}] ${chunk.chunkText}`;
+      });
+      
+      const enhancedContext = contextParts.join('\n\n');
+      console.log(`[RAG] Enhanced context generated with ${relevantChunks.length} references`);
+      
+      return enhancedContext;
+    } catch (error: any) {
+      console.error('[RAG] Error getting enhanced context:', error);
       return '';
     }
   }
 
   async getUserDocumentStats(userId: number): Promise<{ documentCount: number; chunkCount: number }> {
     try {
-      const result = await db.select({
-        chunkCount: sql<number>`count(*)`,
-        documentCount: sql<number>`count(distinct ${ragChunks.documentId})`
-      })
-      .from(ragChunks)
-      .where(userId === 0 ? sql`1=1` : eq(ragChunks.userId, userId));
-
+      const chunks = await db.select().from(ragChunks).where(eq(ragChunks.userId, userId));
+      
+      // Count unique documents
+      const uniqueDocuments = new Set();
+      chunks.forEach(chunk => {
+        const baseDocId = chunk.documentId.split('_chunk_')[0];
+        uniqueDocuments.add(baseDocId);
+      });
+      
       return {
-        documentCount: result[0]?.documentCount || 0,
-        chunkCount: result[0]?.chunkCount || 0
+        documentCount: uniqueDocuments.size,
+        chunkCount: chunks.length
       };
-    } catch (error) {
-      console.error('Error getting document stats:', error);
+    } catch (error: any) {
+      console.error('[RAG] Error getting user document stats:', error);
       return { documentCount: 0, chunkCount: 0 };
     }
   }
 
   async clearUserDocuments(userId: number): Promise<void> {
     try {
+      console.log(`[RAG] Clearing documents for user: ${userId}`);
       await db.delete(ragChunks).where(eq(ragChunks.userId, userId));
-    } catch (error) {
-      console.error('Error clearing user documents:', error);
+      console.log(`[RAG] Cleared documents for user: ${userId}`);
+    } catch (error: any) {
+      console.error('[RAG] Error clearing user documents:', error);
       throw error;
     }
   }
