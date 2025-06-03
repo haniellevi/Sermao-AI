@@ -36,6 +36,16 @@ interface AuthRequest extends Express.Request {
   headers: any;
 }
 
+// Admin middleware
+const authenticateAdmin = async (req: AuthRequest, res: any, next: any) => {
+  await authenticateToken(req, res, () => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Acesso restrito a administradores' });
+    }
+    next();
+  });
+};
+
 const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -91,7 +101,7 @@ const comparePassword = async (password: string, hash: string): Promise<boolean>
 };
 
 // AI helper function
-const callGemini = async (prompt: string, isLongForm = false): Promise<string> => {
+const callGemini = async (prompt: string, isLongForm = false, userId?: number, type?: string): Promise<string> => {
   try {
     const model = genAI.getGenerativeModel({ 
       model: isLongForm ? "gemini-1.5-pro" : "gemini-1.5-flash" 
@@ -99,7 +109,27 @@ const callGemini = async (prompt: string, isLongForm = false): Promise<string> =
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+    const responseText = response.text();
+
+    // Log the AI interaction if userId and type are provided
+    if (userId && type) {
+      try {
+        await storage.createAiLog({
+          userId,
+          prompt,
+          response: responseText,
+          type,
+          metadata: {
+            model: isLongForm ? "gemini-1.5-pro" : "gemini-1.5-flash",
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (logError) {
+        console.error('Erro ao salvar log da IA:', logError);
+      }
+    }
+
+    return responseText;
   } catch (error: any) {
     console.error('Gemini AI error:', error);
 
@@ -247,7 +277,7 @@ Seu retorno DEVE ser um objeto JSON, estritamente no formato abaixo. Seja o mais
 Retorne APENAS o JSON, sem texto adicional antes ou depois.
 `;
 
-    const dnaResponse = await callGemini(dnaPrompt);
+    const dnaResponse = await callGemini(dnaPrompt, false, userId, 'dna');
 
     try {
       // Clean the response to remove markdown formatting
@@ -433,7 +463,8 @@ Formato de Resposta (APENAS JSON):
 
 Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 
-    const response = await callGemini(sermonPrompt, true);
+    // Get userId from request context (will be added in the route)
+    const response = await callGemini(sermonPrompt, true, request.userId, 'sermon');
 
     // Clean and parse the response
     let cleanedResponse = response.trim();
@@ -502,11 +533,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await hashPassword(password);
 
+      // Check if this is the first user (make them admin)
+      const existingUsers = await db.select().from(users);
+      const isFirstUser = existingUsers.length === 0;
+
       // Create user
       const user = await storage.createUser({
         email,
         password: hashedPassword,
         name,
+        role: isFirstUser ? 'admin' : 'user',
       });
 
       // Generate token
@@ -797,6 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sermonContent = await generateSermonWithAI({
         ...validatedData,
         activeDnaProfile,
+        userId,
       });
 
       // Check current sermon count and maintain limit of 5
@@ -912,6 +949,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Erro ao excluir sermão:', error);
       res.status(500).json({ message: 'Falha ao excluir sermão' });
+    }
+  });
+
+  // Admin routes
+  app.get('/api/admin/ai-logs', authenticateAdmin, async (req: AuthRequest, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const logs = await storage.getAiLogs(limit);
+      
+      // Include user information for each log
+      const logsWithUsers = await Promise.all(
+        logs.map(async (log) => {
+          const user = await storage.getUser(log.userId);
+          return {
+            ...log,
+            user: user ? { id: user.id, email: user.email, name: user.name } : null
+          };
+        })
+      );
+      
+      res.json(logsWithUsers);
+    } catch (error: any) {
+      console.error('Erro ao buscar logs da IA:', error);
+      res.status(500).json({ message: 'Falha ao recuperar logs da IA' });
+    }
+  });
+
+  app.get('/api/admin/ai-logs/:id', authenticateAdmin, async (req: AuthRequest, res) => {
+    try {
+      const logId = parseInt(req.params.id);
+      const logs = await storage.getAiLogs(1000); // Get more logs to find the specific one
+      const log = logs.find(l => l.id === logId);
+      
+      if (!log) {
+        return res.status(404).json({ message: 'Log não encontrado' });
+      }
+
+      const user = await storage.getUser(log.userId);
+      res.json({
+        ...log,
+        user: user ? { id: user.id, email: user.email, name: user.name } : null
+      });
+    } catch (error: any) {
+      console.error('Erro ao buscar log específico:', error);
+      res.status(500).json({ message: 'Falha ao recuperar log' });
+    }
+  });
+
+  app.get('/api/admin/users', authenticateAdmin, async (req: AuthRequest, res) => {
+    try {
+      const users = await db.select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        createdAt: users.createdAt,
+        activeDnaProfileId: users.activeDnaProfileId
+      }).from(users).orderBy(desc(users.createdAt));
+
+      res.json(users);
+    } catch (error: any) {
+      console.error('Erro ao buscar usuários:', error);
+      res.status(500).json({ message: 'Falha ao recuperar usuários' });
+    }
+  });
+
+  app.get('/api/admin/stats', authenticateAdmin, async (req: AuthRequest, res) => {
+    try {
+      const totalUsers = await db.$count(users);
+      const totalSermons = await db.$count(sermons);
+      const totalDnaProfiles = await db.$count(dnaProfiles);
+      const totalAiLogs = await db.$count(aiLogs);
+
+      res.json({
+        totalUsers,
+        totalSermons,
+        totalDnaProfiles,
+        totalAiLogs
+      });
+    } catch (error: any) {
+      console.error('Erro ao buscar estatísticas:', error);
+      res.status(500).json({ message: 'Falha ao recuperar estatísticas' });
     }
   });
 

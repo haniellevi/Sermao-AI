@@ -16,6 +16,7 @@ import GenerateSermonPage from "@/pages/generate-sermon";
 import SermonResultPage from "@/pages/sermon-result";
 import HistoryPage from "@/pages/history";
 import EditSermonPage from "@/pages/edit-sermon";
+import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/sermon-result/:id" component={SermonResultPage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/edit-sermon/:id" component={EditSermonPage} />
+      <Route path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );

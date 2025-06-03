@@ -3,6 +3,7 @@ import {
   dnaProfiles,
   sermons,
   passwordResetTokens,
+  aiLogs,
   type User,
   type InsertUser,
   type DnaProfile,
@@ -11,6 +12,8 @@ import {
   type InsertSermon,
   type PasswordResetToken,
   type InsertPasswordResetToken,
+  type AiLog,
+  type InsertAiLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -42,6 +45,11 @@ export interface IStorage {
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenUsed(id: number): Promise<void>;
+
+  // AI Logs operations
+  createAiLog(log: InsertAiLog): Promise<AiLog>;
+  getAiLogs(limit?: number): Promise<AiLog[]>;
+  getAiLogsByUserId(userId: number): Promise<AiLog[]>;
 
   // Object Storage operations
   uploadDnaFile(userId: number, fileName: string, buffer: Buffer): Promise<string>;
@@ -236,6 +244,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStoredFile(key: string): Promise<void> {
     return await objectStorage.deleteFile(key);
+  }
+
+  // AI Logs operations
+  async createAiLog(insertAiLog: InsertAiLog): Promise<AiLog> {
+    const [log] = await db
+      .insert(aiLogs)
+      .values(insertAiLog)
+      .returning();
+    return log;
+  }
+
+  async getAiLogs(limit: number = 50): Promise<AiLog[]> {
+    return await db
+      .select()
+      .from(aiLogs)
+      .orderBy(desc(aiLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getAiLogsByUserId(userId: number): Promise<AiLog[]> {
+    return await db
+      .select()
+      .from(aiLogs)
+      .where(eq(aiLogs.userId, userId))
+      .orderBy(desc(aiLogs.createdAt));
   }
 }
 

@@ -37,7 +37,7 @@ export function Navbar() {
               <h1 className="text-xl font-bold text-gray-900">Gerador de Sermões</h1>
             </div>
           </Link>
-          
+
           {/* Navigation Links */}
           <div className="flex items-center space-x-4">
             <Link href="/my-dna">
@@ -46,14 +46,14 @@ export function Navbar() {
                 Meu DNA
               </Button>
             </Link>
-            
+
             <Link href="/generate-sermon">
               <Button variant="ghost" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100">
                 <Plus className="w-4 h-4 mr-2" />
                 Novo Sermão
               </Button>
             </Link>
-            
+
             {/* Profile Dropdown */}
             <DropdownMenu open={isProfileOpen} onOpenChange={setIsProfileOpen}>
               <DropdownMenuTrigger asChild>
