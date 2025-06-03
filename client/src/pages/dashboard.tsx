@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar, BookOpen } from "lucide-react";
+import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar, BookOpen, Shield } from "lucide-react";
 import { useAuthContext } from "@/lib/auth";
 
 export default function DashboardPage() {

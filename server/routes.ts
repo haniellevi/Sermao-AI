@@ -1119,7 +1119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Users Management - Get user details with DNA
-  app.get('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+  app.get('/api/admin/users/:id', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
@@ -1143,7 +1143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Users Management - Update user status
-  app.patch('/api/admin/users/:id/status', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+  app.patch('/api/admin/users/:id/status', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
       const { isActive } = req.body;
@@ -1165,7 +1165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Users Management - Delete user
-  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+  app.delete('/api/admin/users/:id', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
       
@@ -1186,7 +1186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin RAG Management - List RAG documents
-  app.get('/api/admin/rag/documents', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+  app.get('/api/admin/rag/documents', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const documents = await db.select().from(ragChunks)
         .orderBy(sql`${ragChunks.createdAt} DESC`);
@@ -1214,7 +1214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin RAG Management - Delete RAG document
-  app.delete('/api/admin/rag/documents/:documentId', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+  app.delete('/api/admin/rag/documents/:documentId', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const documentId = req.params.documentId;
       
@@ -1228,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin RAG Management - Bulk index documents
-  app.post('/api/admin/rag/bulk-index', isAuthenticated, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res) => {
+  app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res) => {
     try {
       const files = req.files as Express.Multer.File[] || [];
       const adminUserId = req.user!.claims.sub;
