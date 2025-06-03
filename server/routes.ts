@@ -16,6 +16,8 @@ import {
   type User
 } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ChromaApi, OpenAIEmbeddingFunction } from 'chromadb';
+import path from "path";
 
 // Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'sermon-generator-secret';
@@ -347,6 +349,42 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
   }
 };
 
+// RAG helper function
+const retrieve_relevant_chunks = async (query_text: string, num_results: number = 3): Promise<string[]> => {
+  try {
+    // Initialize ChromaDB client
+    const chromaClient = new ChromaApi({
+      path: path.join(process.cwd(), 'backend', 'data', 'chromadb')
+    });
+
+    // Get the collection
+    const collection = await chromaClient.getCollection({
+      name: "bible_comments_rag"
+    });
+
+    // Generate embedding for query text using Gemini
+    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+    const result = await model.embedContent(query_text);
+    const queryEmbedding = result.embedding.values;
+
+    // Search for similar chunks in ChromaDB
+    const searchResults = await collection.query({
+      queryEmbeddings: [queryEmbedding],
+      nResults: num_results
+    });
+
+    // Extract and return the document texts
+    if (searchResults.documents && searchResults.documents[0]) {
+      return searchResults.documents[0].filter(doc => doc !== null) as string[];
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error retrieving chunks from ChromaDB:', error);
+    return [];
+  }
+};
+
 // Sermon generation function  
 const generateSermonWithAI = async (request: any): Promise<any> => {
   try {
@@ -355,6 +393,10 @@ const generateSermonWithAI = async (request: any): Promise<any> => {
     // Read system prompt from file
     const systemPromptPath = path.join(process.cwd(), 'backend', 'prompts', 'AGENTE_GERADOR_SERMAO.txt');
     const systemPromptContent = fs.readFileSync(systemPromptPath, 'utf8');
+
+    // Retrieve relevant context using RAG
+    const queryForRAG = `${theme} ${purpose !== 'nenhum' ? purpose : ''} ${style !== 'nenhum' ? style : ''}`.trim();
+    const retrievedContext = await retrieve_relevant_chunks(queryForRAG, 3);
 
     const dnaContext = activeDnaProfile && dnaType === 'customizado' ? `
 PERFIL DNA DO PREGADOR (Análise Detalhada):
@@ -397,10 +439,29 @@ PERFIL DNA DO PREGADOR (Análise Detalhada):
 ADERÊNCIA RIGOROSA: O sermão deve incorporar TODAS as características identificadas acima, replicando fielmente o estilo único deste pregador.
 ` : 'PERFIL DNA: Padrão equilibrado e versátil - pastor batista bem embasado, focado no ensino bíblico com aplicação prática';
 
-    // Create user message content with detailed instructions
+    // Create user message content with detailed instructions and RAG context
+    const ragContextSection = retrievedContext.length > 0 
+      ? `
+--- CONTEXTO ADICIONAL DE COMENTÁRIOS BÍBLICOS RECUPERADO ---
+
+Os seguintes trechos de comentários bíblicos foram recuperados para enriquecer o sermão:
+
+${retrievedContext.map((chunk, index) => `
+FONTE ${index + 1}:
+${chunk}
+`).join('\n')}
+
+Use este contexto para aprofundar a exegese, trazer insights teológicos adicionais e enriquecer a aplicação prática do sermão.
+
+--- FIM DO CONTEXTO RECUPERADO ---
+`
+      : '';
+
     const userMessageContent = `
+${ragContextSection}
+
 Modo de Operação Detalhado para ESTE SERMÃO:
-Com base no DNA do Pregador, e nos parâmetros abaixo, gere um sermão completo.
+Com base no DNA do Pregador, no contexto recuperado acima, e nos parâmetros abaixo, gere um sermão completo.
 
 Duração do Sermão (DIRETIVA CRÍTICA): ADAPTE O VOLUME DE CONTEÚDO, DETALHE E PROFUNDIDADE PARA ATINGIR A DURAÇÃO EXATA SOLICITADA.
 
