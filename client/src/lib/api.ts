@@ -40,7 +40,7 @@ export async function apiRequest(
 export async function apiUpload(
   url: string,
   formData: FormData,
-): Promise<Response> {
+): Promise<any> {
   const token = localStorage.getItem("auth_token");
   
   const headers: Record<string, string> = {};
@@ -70,5 +70,5 @@ export async function apiUpload(
     throw new Error(`${res.status}: ${errorMessage}`);
   }
 
-  return res;
+  return res.json();
 }

@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { apiUpload } from "@/lib/api";
 
 // Função auxiliar para debug de token
 const getTokenForRequest = (): string | null => {
@@ -160,26 +161,16 @@ export default function AdminBulkIndexPage() {
         });
       }, 2000);
 
-      const response = await fetch('/api/admin/rag/bulk-index', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const response = await apiUpload("/api/admin/rag/bulk-index", formData);
 
       clearInterval(progressInterval);
       clearInterval(timeInterval);
       setProgress(100);
       setCurrentFile('Concluído');
-      setResults(data.results || []);
+      setResults(response.results || []);
 
-      const successCount = data.successful || 0;
-      const totalCount = data.processed || 0;
+      const successCount = response.successful || 0;
+      const totalCount = response.processed || 0;
 
       toast({
         title: "Processamento Concluído",
