@@ -1,0 +1,55 @@
+Esta é a parte que você construirá dinamicamente no seu código Python (no Replit, dentro da função generateSermonWithAI). A user message contém os dados específicos da requisição do usuário, incluindo o contexto do RAG e o formato de saída desejado.
+
+Python
+
+# backend/app/services.py (dentro de generateSermonWithAI)
+
+# ... (Lógica de inferência de parâmetros, busca de versículos, RECUPERAÇÃO RAG, etc.) ...
+
+# Construção da mensagem do usuário
+userMessageContent = f"""
+---
+## ⚙️ Modo Operacional para ESTE SERMÃO ESPECÍFICO:
+
+1.  **Parâmetros do Sermão (Fornecidos/Inferidos):**
+    -   Tema: {inferredTheme}
+    -   Propósito: {inferredPurpose}
+    -   Público-alvo: {inferredAudience}
+    -   Duração Solicitada: {inferredDuration} (ADAPTE O VOLUME DE CONTEÚDO, DETALHE, NÚMERO DE PONTOS E PROFUNDIDADE DE EXPLANAÇÃO PARA ATINGIR ESTA DURAÇÃO. Considere 120-150 palavras por minuto.)
+    -   Estilo: {inferredStyle}
+    -   Contexto: {inferredContext}
+    -   Versículos Bíblicos Selecionados: {", ".join(bibleVerses) if bibleVerses else "Nenhum"}
+    -   Insights de Sermões de Referência: {referenceInsights} (Se URLs de referência foram processadas e resumidas.)
+
+2.  **DNA do Pregador (Perfil Completo):**
+    {dnaContext}
+
+3.  **Contexto Adicional de Comentários Bíblicos (RAG):**
+    Use este contexto, recuperado de suas fontes de referência, para aprofundar e enriquecer o sermão. **Priorize esta informação para precisão e detalhes factuais/teológicos.**
+    {retrievedContext}
+
+---
+## 📝 Formato de Resposta (JSON - ESTRICTAMENTE NESTE FORMATO):
+
+Retorne APENAS o JSON, sem texto adicional antes ou depois.
+
+{{
+  "sermão": "Texto completo do sermão gerado, **JÁ FORMATADO em LINGUAGEM NATURAL, como um post de blog**. Utilize títulos, subtítulos, parágrafos espaçados, e uso estratégico de negrito/itálico para máxima legibilidade e impacto. Exemplos de formatação: \\n\\n## Título do Sermão: A Esperança que Transforma\\n\\n### Introdução: Onde Encontramos Refúgio?\\n\\n[Primeiro parágrafo da introdução...]\\n\\n### Ponto 1: A Natureza da Verdadeira Esperança\\n\\n**Hebreus 11:1** - _'Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.'_\\n\\n[Explanação do ponto...]\\n\\n### Conclusão: Uma Chamada à Ação Transformadora\\n\\n[Último parágrafo da conclusão...]",
+  "sugestoes_enriquecimento": [
+    "Sugestão 1: Descrição da ilustração/metáfora/dinâmica.",
+    "Sugestão 2: Descrição da ilustração/metáfora/dinâmica."
+  ],
+  "avaliacao_qualidade": {
+    "nota": "Número de 0 a 10, pode ser decimal (ex: 9.2)",
+    "justificativa": "Breve texto com pontos fortes e sugestões de melhoria."
+  }
+}}
+"""
+
+# --- CONSTRUÇÃO FINAL DAS MENSAGENS PARA O GEMINI ---
+messagesForGemini = [
+    {"role": "system", "parts": [{"text": systemPromptContent}]},
+    {"role": "user", "parts": [{"text": userMessageContent}]}
+]
+
+# ... (Restante da chamada para callGeminiChatModel) ...
