@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { 
@@ -130,64 +131,60 @@ export default function AdminDashboard() {
   };
 
   const handleUserDelete = async (userId: number, userName: string) => {
-    if (window.confirm(`Tem certeza que deseja deletar o usuário "${userName}"? Esta ação não pode ser desfeita.`)) {
-      try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Erro ao deletar usuário');
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-        
-        toast({
-          title: "Sucesso",
-          description: "Usuário deletado com sucesso",
-        });
-        
-        refetchUsers();
-      } catch (error: any) {
-        toast({
-          title: "Erro",
-          description: error.message || 'Erro ao deletar usuário',
-          variant: "destructive",
-        });
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao deletar usuário');
       }
+      
+      toast({
+        title: "Sucesso",
+        description: "Usuário deletado com sucesso",
+      });
+      
+      refetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || 'Erro ao deletar usuário',
+        variant: "destructive",
+      });
     }
   };
 
   const handleRagDocDelete = async (documentId: string) => {
-    if (window.confirm("Tem certeza que deseja remover este documento? Esta ação não pode ser desfeita.")) {
-      try {
-        const response = await fetch(`/api/admin/rag/documents/${documentId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Erro ao remover documento');
+    try {
+      const response = await fetch(`/api/admin/rag/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-        
-        toast({
-          title: "Sucesso",
-          description: "Documento removido com sucesso",
-        });
-        
-        refetchRag();
-      } catch (error: any) {
-        toast({
-          title: "Erro",
-          description: error.message || 'Erro ao remover documento',
-          variant: "destructive",
-        });
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao remover documento');
       }
+      
+      toast({
+        title: "Sucesso",
+        description: "Documento removido com sucesso",
+      });
+      
+      refetchRag();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || 'Erro ao remover documento',
+        variant: "destructive",
+      });
     }
   };
 
@@ -477,14 +474,28 @@ export default function AdminDashboard() {
                           <span>Criado: {new Date(doc.createdAt).toLocaleDateString('pt-BR')}</span>
                         </div>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRagDocDelete(doc.documentId)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remover
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                            Remover
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja remover o documento "{doc.documentId}"? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleRagDocDelete(doc.documentId)}>
+                              Confirmar Exclusão
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   ))}
                 </div>

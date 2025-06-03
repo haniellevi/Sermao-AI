@@ -257,10 +257,9 @@ export default function GenerateSermonPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="nenhum">Nenhum</SelectItem>
+                        <SelectItem value="topico">Tópico</SelectItem>
                         <SelectItem value="expositivo">Expositivo</SelectItem>
-                        <SelectItem value="tematico">Temático</SelectItem>
-                        <SelectItem value="narrativo">Narrativo</SelectItem>
-                        <SelectItem value="devocional">Devocional</SelectItem>
+                        <SelectItem value="textual">Textual</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
