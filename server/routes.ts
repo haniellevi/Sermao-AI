@@ -474,50 +474,46 @@ PERFIL DNA DO PREGADOR (Análise Detalhada):
 ADERÊNCIA RIGOROSA: O sermão deve incorporar TODAS as características identificadas acima, replicando fielmente o estilo único deste pregador.
 ` : 'PERFIL DNA: Padrão equilibrado e versátil - pastor batista bem embasado, focado no ensino bíblico com aplicação prática';
 
-    // Create user message content with detailed instructions and RAG context
-    const ragContextSection = ragContext 
-      ? `
---- CONTEXTO ADICIONAL DE DOCUMENTOS TEOLÓGICOS RECUPERADO ---
+    // Prepare inference variables
+    const inferredTheme = theme || 'Tema livre';
+    const inferredPurpose = purpose === 'nenhum' ? 'Geral' : purpose;
+    const inferredAudience = audience === 'nenhum' ? 'Congregação geral' : audience;
+    const inferredDuration = duration === 'nenhum' ? '30-45 minutos' : duration;
+    const inferredStyle = style === 'nenhum' ? 'Expositivo' : style;
+    const inferredContext = context === 'nenhum' ? 'Culto regular' : context;
+    const bibleVerses: string[] = []; // Will be populated if we implement verse extraction
+    const referenceInsights = referenceUrls ? 'URLs de referência fornecidas para processamento' : 'Nenhum insight específico';
+    const retrievedContext = ragContext || 'Nenhum contexto adicional recuperado dos documentos teológicos.';
 
-${ragContext}
-
-Use este contexto para aprofundar a exegese, trazer insights teológicos adicionais e enriquecer a aplicação prática do sermão.
-
---- FIM DO CONTEXTO RECUPERADO ---
-`
-      : '';
-
+    // Create user message content following the new dynamic format
     const userMessageContent = `
-${ragContextSection}
+---
+## ⚙️ Modo Operacional para ESTE SERMÃO ESPECÍFICO:
 
-Modo de Operação Detalhado para ESTE SERMÃO:
-Com base no DNA do Pregador, no contexto recuperado acima, e nos parâmetros abaixo, gere um sermão completo.
+1.  **Parâmetros do Sermão (Fornecidos/Inferidos):**
+    -   Tema: ${inferredTheme}
+    -   Propósito: ${inferredPurpose}
+    -   Público-alvo: ${inferredAudience}
+    -   Duração Solicitada: ${inferredDuration} (ADAPTE O VOLUME DE CONTEÚDO, DETALHE, NÚMERO DE PONTOS E PROFUNDIDADE DE EXPLANAÇÃO PARA ATINGIR ESTA DURAÇÃO. Considere 120-150 palavras por minuto.)
+    -   Estilo: ${inferredStyle}
+    -   Contexto: ${inferredContext}
+    -   Versículos Bíblicos Selecionados: ${bibleVerses.length > 0 ? bibleVerses.join(", ") : "Nenhum"}
+    -   Insights de Sermões de Referência: ${referenceInsights}
 
-Duração do Sermão (DIRETIVA CRÍTICA): ADAPTE O VOLUME DE CONTEÚDO, DETALHE E PROFUNDIDADE PARA ATINGIR A DURAÇÃO EXATA SOLICITADA.
+2.  **DNA do Pregador (Perfil Completo):**
+    ${dnaContext}
 
-Para sermões mais curtos (10-15 minutos): Seja conciso, direto ao ponto. Foque em 2-3 pontos principais bem desenvolvidos, com aplicações e ilustrações mais breves. Priorize a mensagem central sem digressões excessivas. A introdução e a conclusão devem ser mais objetivas.
+3.  **Contexto Adicional de Comentários Bíblicos (RAG):**
+    Use este contexto, recuperado de suas fontes de referência, para aprofundar e enriquecer o sermão. **Priorize esta informação para precisão e detalhes factuais/teológicos.**
+    ${retrievedContext}
 
-Para sermões de duração média (30-45 minutos): Desenvolva 3-4 pontos principais com profundidade adequada. Expanda a exegese, traga mais aplicações práticas e exemplos. As ilustrações podem ser mais elaboradas. As transições devem ser suaves e aprofundadas.
+---
+## 📝 Formato de Resposta (JSON - ESTRICTAMENTE NESTE FORMATO):
 
-Para sermões mais longos (60 minutos): Desenvolva 4-5 pontos principais com grande profundidade. Inclua mais detalhes teológicos, históricos e contextuais. Explore subpontos dentro de cada ponto principal. Use ilustrações mais complexas ou múltiplas. A explanação da aplicação pode ser mais extensa e variada. Pode incluir momentos para reflexão ou perguntas retóricas mais longas que "preenchem" o tempo de entrega. A introdução pode ser mais elaborada para captar a atenção e contextualizar amplamente.
-
-DADOS DE ENTRADA ESPECÍFICOS PARA ESTE SERMÃO:
-Tema: ${theme || 'Tema livre'}
-Propósito: ${purpose === 'nenhum' ? 'Geral' : purpose}
-Público-alvo: ${audience === 'nenhum' ? 'Congregação geral' : audience}
-Duração: ${duration === 'nenhum' ? '30-45 minutos' : duration}
-Estilo: ${style === 'nenhum' ? 'Expositivo' : style}
-Contexto: ${context === 'nenhum' ? 'Culto regular' : context}
-URLs de Referência: ${referenceUrls || 'Nenhuma'}
-
-DNA DO PREGADOR (Perfil Completo):
-${dnaContext}
-
-Formato de Resposta (JSON - ESTRITAMENTE NESTE FORMATO):
 Retorne APENAS o JSON, sem texto adicional antes ou depois.
 
 {
-  "sermao": "Texto completo do sermão gerado, JÁ FORMATADO em LINGUAGEM NATURAL, como um post de blog. Utilize títulos, subtítulos, parágrafos espaçados, e uso estratégico de negrito/itálico para máxima legibilidade e impacto. Exemplos de formatação: \\n\\n## Título do Sermão: A Esperança que Transforma\\n\\n### Introdução: Onde Encontramos Refúgio?\\n\\n[Primeiro parágrafo da introdução...]\\n\\n### Ponto 1: A Natureza da Verdadeira Esperança\\n\\n**Hebreus 11:1** - _'Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.'_\\n\\n[Explanação do ponto...]\\n\\n### Conclusão: Uma Chamada à Ação Transformadora\\n\\n[Último parágrafo da conclusão...]",
+  "sermao": "Texto completo do sermão gerado, **JÁ FORMATADO em LINGUAGEM NATURAL, como um post de blog**. Utilize títulos, subtítulos, parágrafos espaçados, e uso estratégico de negrito/itálico para máxima legibilidade e impacto. Exemplos de formatação: \\n\\n## Título do Sermão: A Esperança que Transforma\\n\\n### Introdução: Onde Encontramos Refúgio?\\n\\n[Primeiro parágrafo da introdução...]\\n\\n### Ponto 1: A Natureza da Verdadeira Esperança\\n\\n**Hebreus 11:1** - _'Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.'_\\n\\n[Explanação do ponto...]\\n\\n### Conclusão: Uma Chamada à Ação Transformadora\\n\\n[Último parágrafo da conclusão...]",
   "sugestoes_enriquecimento": [
     "Sugestão 1: Descrição da ilustração/metáfora/dinâmica.",
     "Sugestão 2: Descrição da ilustração/metáfora/dinâmica."
