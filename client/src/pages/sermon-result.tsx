@@ -179,8 +179,12 @@ export default function SermonResultPage() {
   });
 
   const handleDeleteSermon = () => {
+    console.log('Delete button clicked, sermonId:', sermonId);
     if (sermonId) {
+      console.log('Starting deletion mutation...');
       deleteSermonMutation.mutate(sermonId);
+    } else {
+      console.log('No sermonId available for deletion');
     }
   };
 
