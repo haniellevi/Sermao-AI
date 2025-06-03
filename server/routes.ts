@@ -1,3 +1,4 @@
+
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import jwt from "jsonwebtoken";
@@ -37,8 +38,6 @@ interface AuthRequest extends Express.Request {
   params: any;
   headers: any;
 }
-
-
 
 const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
@@ -745,58 +744,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload de arquivos para DNA
-  app.post('/api/dna-profiles/upload', authenticateToken, upload.array('files', 10), async (req: AuthRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      const files = req.files as Express.Multer.File[];
-      if (!files || files.length === 0) {
-        return res.status(400).json({ message: 'Nenhum arquivo enviado' });
-      }
-
-      const uploadedFiles = [];
-      for (const file of files) {
-        const key = await storage.uploadDnaFile(userId, file.originalname, file.buffer);
-        uploadedFiles.push({
-          name: file.originalname,
-          size: file.size,
-          type: file.mimetype,
-          key: key
-        });
-      }
-
-      res.json({ files: uploadedFiles });
-    } catch (error: any) {
-      console.error('Erro no upload de arquivos DNA:', error);
-      res.status(500).json({ message: error.message || 'Erro ao fazer upload dos arquivos' });
-    }
-  });
-
-  // Download de arquivo armazenado
-  app.get('/api/files/:key(*)', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      const key = req.params.key;
-      const fileBuffer = await storage.downloadFile(key);
-
-      // Determinar o tipo de conteúdo baseado na extensão
-      const fileName = key.split('/').pop() || 'file';
-      const ext = fileName.split('.').pop()?.toLowerCase();
-
-      let contentType = 'application/octet-stream';
-      if (ext === 'pdf') contentType = 'application/pdf';
-      else if (ext === 'txt') contentType = 'text/plain';
-      else if (ext === 'docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      else if (ext === 'doc') contentType = 'application/msword';
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.send(fileBuffer);
-    } catch (error: any) {
-      console.error('Erro ao baixar arquivo:', error);
-      res.status(404).json({ message: 'Arquivo não encontrado' });
-    }
-  });
-
   app.post('/api/sermon/generate', authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -926,8 +873,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Falha ao excluir sermão' });
     }
   });
-
-  
 
   const httpServer = createServer(app);
   return httpServer;

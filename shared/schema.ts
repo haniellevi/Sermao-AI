@@ -1,3 +1,4 @@
+
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -30,7 +31,8 @@ export const dnaProfiles = pgTable("dna_profiles", {
   uploadedFiles: jsonb("uploaded_files").default([]),
   pastedTexts: jsonb("pasted_texts").default([]),
   youtubeLinks: jsonb("youtube_links").default([]),
-  objectStorageKeys: jsonb("object_storage_keys").default([]), // Chaves dos arquivos no Object Storage
+  objectStorageKeys: jsonb("object_storage_keys").default([]),
+  content: text("content"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -40,12 +42,13 @@ export const sermons = pgTable("sermons", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
-  baseText: varchar("base_text", { length: 255 }),
+  baseText: text("base_text"),
   theme: varchar("theme", { length: 255 }),
-  duration: integer("duration"),
   targetAudience: varchar("target_audience", { length: 255 }),
+  duration: integer("duration"),
   occasion: varchar("occasion", { length: 255 }),
-  metadata: jsonb("metadata").default({}), // Para armazenar chaves do Object Storage e outros dados
+  metadata: jsonb("metadata"),
+  dnaProfileId: integer("dna_profile_id").references(() => dnaProfiles.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -58,8 +61,6 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   used: boolean("used").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
-
-
 
 // Insert schemas with password validation
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -142,7 +143,6 @@ export type Sermon = typeof sermons.$inferSelect;
 export type InsertSermon = z.infer<typeof insertSermonSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
-
 
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;

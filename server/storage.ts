@@ -14,7 +14,6 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
-import { objectStorage } from "./objectStorage";
 
 export interface IStorage {
   // User operations
@@ -42,17 +41,6 @@ export interface IStorage {
   createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenUsed(id: number): Promise<void>;
-
-  
-
-  // Object Storage operations
-  uploadDnaFile(userId: number, fileName: string, buffer: Buffer): Promise<string>;
-  uploadSermonFile(userId: number, sermonId: number, fileName: string, buffer: Buffer): Promise<string>;
-  saveSermonContent(userId: number, sermonId: number, content: string): Promise<string>;
-  getSermonContent(key: string): Promise<string>;
-  saveDnaProfileData(userId: number, profileId: number, dnaData: any): Promise<string>;
-  getDnaProfileData(key: string): Promise<any>;
-  deleteStoredFile(key: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -72,7 +60,7 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values(insertUser)
       .returning();
-    
+
     // Create a default DNA profile for the new user
     await this.createDnaProfile({
       userId: user.id,
@@ -118,7 +106,7 @@ export class DatabaseStorage implements IStorage {
       const [profile] = await db.select().from(dnaProfiles).where(eq(dnaProfiles.userId, userId)).orderBy(desc(dnaProfiles.createdAt)).limit(1);
       return profile;
     }
-    
+
     const [profile] = await db.select().from(dnaProfiles).where(eq(dnaProfiles.id, user.activeDnaProfileId));
     return profile;
   }
@@ -210,37 +198,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
-
-  // Object Storage operations implementation
-  async uploadDnaFile(userId: number, fileName: string, buffer: Buffer): Promise<string> {
-    return await objectStorage.uploadDnaFile(userId, fileName, buffer);
-  }
-
-  async uploadSermonFile(userId: number, sermonId: number, fileName: string, buffer: Buffer): Promise<string> {
-    return await objectStorage.uploadSermonFile(userId, sermonId, fileName, buffer);
-  }
-
-  async saveSermonContent(userId: number, sermonId: number, content: string): Promise<string> {
-    return await objectStorage.saveSermonText(userId, sermonId, content);
-  }
-
-  async getSermonContent(key: string): Promise<string> {
-    return await objectStorage.getSermonText(key);
-  }
-
-  async saveDnaProfileData(userId: number, profileId: number, dnaData: any): Promise<string> {
-    return await objectStorage.saveDnaProfile(userId, profileId, dnaData);
-  }
-
-  async getDnaProfileData(key: string): Promise<any> {
-    return await objectStorage.getDnaProfile(key);
-  }
-
-  async deleteStoredFile(key: string): Promise<void> {
-    return await objectStorage.deleteFile(key);
-  }
-
-  
 }
 
 export const storage = new DatabaseStorage();

@@ -1,75 +1,116 @@
-import { useState } from "react";
+
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 import { 
+  Home, 
+  Plus, 
+  History, 
+  User,
+  LogOut,
+  ChevronDown
+} from "lucide-react";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, useLocation } from "wouter";
-import { Scroll, Dna, Plus, User, LogOut, ChevronDown } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 
 export function Navbar() {
-  const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    setLocation("/");
+    navigate('/login');
   };
 
-  if (!user) {
-    return null;
-  }
+  const isActive = (path: string) => location.pathname === path;
+
+  if (!user) return null;
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo and Title */}
-          <Link href="/dashboard">
-            <div className="flex items-center cursor-pointer">
-              <div className="bg-primary rounded-lg p-2 mr-3">
-                <Scroll className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">Gerador de Sermões</h1>
-            </div>
-          </Link>
-
-          {/* Navigation Links */}
-          <div className="flex items-center space-x-4">
-            <Link href="/my-dna">
-              <Button variant="ghost" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-                <Dna className="w-4 h-4 mr-2" />
-                Meu DNA
-              </Button>
+    <nav className="bg-white shadow-sm border-b">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center space-x-8">
+            <Link to="/dashboard" className="text-xl font-bold text-gray-900">
+              Gerador de Sermões
             </Link>
+            
+            <div className="hidden md:flex space-x-4">
+              <Link
+                to="/dashboard"
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/dashboard')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Dashboard
+              </Link>
 
-            <Link href="/generate-sermon">
-              <Button variant="ghost" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+              <Link
+                to="/generate-sermon"
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/generate-sermon')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
                 <Plus className="w-4 h-4 mr-2" />
-                Novo Sermão
-              </Button>
-            </Link>
+                Gerar Sermão
+              </Link>
 
-            {/* Profile Dropdown */}
-            <DropdownMenu open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+              <Link
+                to="/history"
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/history')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <History className="w-4 h-4 mr-2" />
+                Histórico
+              </Link>
+
+              <Link
+                to="/my-dna"
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/my-dna')
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <User className="w-4 h-4 mr-2" />
+                Meu DNA
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex items-center">
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-                  <div className="bg-primary/10 rounded-full w-8 h-8 flex items-center justify-center mr-2">
-                    <User className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="hidden sm:inline">{user.name}</span>
-                  <ChevronDown className="w-4 h-4 ml-2" />
+                <Button variant="ghost" className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">{user.name}</span>
+                  <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem 
-                  onClick={handleLogout}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
-                >
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                  <Home className="w-4 h-4 mr-2" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/my-dna')}>
+                  <User className="w-4 h-4 mr-2" />
+                  Meu Perfil
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sair
                 </DropdownMenuItem>

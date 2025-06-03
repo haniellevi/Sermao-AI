@@ -1,51 +1,93 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
+import { ProtectedRoute } from "@/lib/auth";
+import { Navbar } from "@/components/layout/navbar";
 
 // Pages
-import WelcomePage from "@/pages/welcome";
-import LoginPage from "@/pages/login";
-import RegisterPage from "@/pages/register";
-import ResetPasswordPage from "@/pages/reset-password";
-import DashboardPage from "@/pages/dashboard";
-import MyDNAPage from "@/pages/my-dna";
-import GenerateSermonPage from "@/pages/generate-sermon";
-import SermonResultPage from "@/pages/sermon-result";
-import HistoryPage from "@/pages/history";
-import EditSermonPage from "@/pages/edit-sermon";
+import { WelcomePage } from "@/pages/welcome";
+import { LoginPage } from "@/pages/login";
+import { RegisterPage } from "@/pages/register";
+import { ResetPasswordPage } from "@/pages/reset-password";
+import { DashboardPage } from "@/pages/dashboard";
+import { GenerateSermonPage } from "@/pages/generate-sermon";
+import { SermonResultPage } from "@/pages/sermon-result";
+import { HistoryPage } from "@/pages/history";
+import { EditSermonPage } from "@/pages/edit-sermon";
+import { MyDnaPage } from "@/pages/my-dna";
+import { NotFoundPage } from "@/pages/not-found";
 
-import NotFound from "@/pages/not-found";
-
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={WelcomePage} />
-      <Route path="/login" component={LoginPage} />
-      <Route path="/register" component={RegisterPage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/my-dna" component={MyDNAPage} />
-      <Route path="/generate-sermon" component={GenerateSermonPage} />
-      <Route path="/sermon-result/:id" component={SermonResultPage} />
-      <Route path="/history" component={HistoryPage} />
-      <Route path="/edit-sermon/:id" component={EditSermonPage} />
-
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<WelcomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/generate-sermon"
+                element={
+                  <ProtectedRoute>
+                    <GenerateSermonPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sermon-result/:id"
+                element={
+                  <ProtectedRoute>
+                    <SermonResultPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <ProtectedRoute>
+                    <HistoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/edit-sermon/:id"
+                element={
+                  <ProtectedRoute>
+                    <EditSermonPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/my-dna"
+                element={
+                  <ProtectedRoute>
+                    <MyDnaPage />
+                  </ProtectedRoute>
+                }
+              />
+              
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </div>
           <Toaster />
-          <Router />
-        </TooltipProvider>
+        </Router>
       </AuthProvider>
     </QueryClientProvider>
   );
