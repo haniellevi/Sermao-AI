@@ -447,10 +447,20 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.
 
     // Clean and parse the response
     let cleanedResponse = response.trim();
+    
+    // Remove markdown code blocks
     if (cleanedResponse.startsWith('```json')) {
       cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (cleanedResponse.startsWith('```')) {
       cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Find JSON content between first { and last }
+    const firstBrace = cleanedResponse.indexOf('{');
+    const lastBrace = cleanedResponse.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
     }
 
     try {
@@ -458,6 +468,7 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.
     } catch (parseError) {
       console.error('Erro ao processar resposta do sermão:', parseError);
       console.error('Resposta original:', response);
+      console.error('Resposta limpa:', cleanedResponse);
 
       // Fallback response
       return {
