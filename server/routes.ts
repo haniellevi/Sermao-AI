@@ -973,6 +973,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // RAG document upload route
+  app.post('/api/rag/upload', authenticateToken, upload.array('documents', 10), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const files = req.files as Express.Multer.File[] || [];
+      
+      if (files.length === 0) {
+        return res.status(400).json({ message: 'Nenhum documento foi enviado' });
+      }
+
+      let documentsProcessed = 0;
+      const errors: string[] = [];
+
+      for (const file of files) {
+        try {
+          const documentId = `doc_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const text = file.buffer.toString('utf-8');
+          
+          // Store document in RAG service
+          await ragService.storeDocument(userId, documentId, text, file.originalname);
+          documentsProcessed++;
+        } catch (error: any) {
+          errors.push(`Erro ao processar ${file.originalname}: ${error.message}`);
+        }
+      }
+
+      const stats = ragService.getUserDocumentStats(userId);
+      
+      res.json({
+        message: `${documentsProcessed} documento(s) processado(s) com sucesso`,
+        documentsProcessed,
+        errors: errors.length > 0 ? errors : undefined,
+        stats
+      });
+    } catch (error: any) {
+      console.error('Erro no upload de documentos RAG:', error);
+      res.status(500).json({ message: 'Falha ao processar documentos' });
+    }
+  });
+
+  // RAG document statistics route
+  app.get('/api/rag/stats', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const stats = ragService.getUserDocumentStats(userId);
+      res.json(stats);
+    } catch (error: any) {
+      console.error('Erro ao buscar estatísticas RAG:', error);
+      res.status(500).json({ message: 'Falha ao recuperar estatísticas' });
+    }
+  });
+
+  // Clear RAG documents route
+  app.delete('/api/rag/documents', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      ragService.clearUserDocuments(userId);
+      res.json({ message: 'Documentos removidos com sucesso' });
+    } catch (error: any) {
+      console.error('Erro ao remover documentos RAG:', error);
+      res.status(500).json({ message: 'Falha ao remover documentos' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
