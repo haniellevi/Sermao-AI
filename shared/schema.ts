@@ -18,7 +18,6 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  role: varchar("role", { length: 20 }).default("user").notNull(),
   activeDnaProfileId: integer("active_dna_profile_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -60,15 +59,7 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const aiLogs = pgTable("ai_logs", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  prompt: text("prompt").notNull(),
-  response: text("response").notNull(),
-  type: varchar("type", { length: 50 }).notNull(), // 'sermon' ou 'dna'
-  metadata: jsonb("metadata").default({}),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+
 
 // Insert schemas with password validation
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -151,8 +142,7 @@ export type Sermon = typeof sermons.$inferSelect;
 export type InsertSermon = z.infer<typeof insertSermonSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
-export type AiLog = typeof aiLogs.$inferSelect;
-export type InsertAiLog = typeof aiLogs.$inferInsert;
+
 
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
