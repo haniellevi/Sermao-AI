@@ -11,6 +11,23 @@ import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle } from "lucide-re
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
+// Função auxiliar para debug de token
+const getTokenForRequest = (): string | null => {
+  // Tentar diferentes chaves de localStorage
+  const possibleKeys = ['token', 'auth_token', 'authToken'];
+  
+  for (const key of possibleKeys) {
+    const token = localStorage.getItem(key);
+    if (token) {
+      console.log(`[TokenDebug] Found token in localStorage key: ${key}`);
+      return token;
+    }
+  }
+  
+  console.log(`[TokenDebug] No token found in any localStorage key`);
+  return null;
+};
+
 interface UploadResult {
   success: boolean;
   fileName: string;
@@ -111,12 +128,32 @@ export default function AdminBulkIndexPage() {
     }, 500);
 
     try {
-      // Obter token de autenticação do localStorage
-      const token = localStorage.getItem('token');
+      // Obter token de autenticação usando função de debug
+      const token = getTokenForRequest();
       console.log(`[AdminBulkIndex] Token obtido:`, token ? `${token.substring(0, 20)}...` : 'null');
+      console.log(`[AdminBulkIndex] LocalStorage keys:`, Object.keys(localStorage));
 
       if (!token) {
-        throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+        console.log(`[AdminBulkIndex] Token not found - redirecting to login`);
+        toast({
+          title: "Erro de Autenticação",
+          description: "Sessão expirada. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => setLocation('/login'), 2000);
+        return;
+      }
+
+      // Validar formato do token JWT
+      if (!token.includes('.') || token.split('.').length !== 3) {
+        console.log(`[AdminBulkIndex] Token format seems invalid`);
+        toast({
+          title: "Erro de Autenticação",
+          description: "Token inválido. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => setLocation('/login'), 2000);
+        return;
       }
 
       const formData = new FormData();
@@ -127,10 +164,12 @@ export default function AdminBulkIndexPage() {
 
       console.log(`[AdminBulkIndex] Enviando requisição para /api/admin/rag/bulk-index`);
 
+      // Usar a função apiUpload que já está configurada corretamente
       const response = await fetch('/api/admin/rag/bulk-index', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          // Não definir Content-Type para FormData - o browser define automaticamente
         },
         credentials: 'include',
         body: formData

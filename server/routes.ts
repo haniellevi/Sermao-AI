@@ -51,8 +51,10 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
 
   console.log('[Auth] Authentication attempt:', {
     hasAuthHeader: !!authHeader,
+    authHeaderPreview: authHeader ? `${authHeader.substring(0, 30)}...` : 'none',
     hasToken: !!token,
     tokenLength: token ? token.length : 0,
+    tokenPreview: token ? `${token.substring(0, 30)}...` : 'none',
     method: (req as any).method,
     url: (req as any).url,
     userAgent: req.headers['user-agent']?.substring(0, 50),
@@ -1275,13 +1277,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('[BulkIndex] Request headers:', {
         authorization: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'missing',
         contentType: req.headers['content-type'],
-        contentLength: req.headers['content-length']
+        contentLength: req.headers['content-length'],
+        userAgent: req.headers['user-agent']?.substring(0, 50)
       });
       console.log('[BulkIndex] User info:', {
         userId: req.user?.id,
         userEmail: req.user?.email,
-        userRole: req.user?.role
+        userRole: req.user?.role,
+        isAuthenticated: !!req.user
       });
+
+      if (!req.user) {
+        console.log('[BulkIndex] User object not found - authentication failed');
+        return res.status(401).json({ message: 'Autenticação necessária' });
+      }
 
       const files = req.files as Express.Multer.File[] || [];
       const adminUserId = req.user!.id;
