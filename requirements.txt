@@ -1,0 +1,10 @@
+
+python-dotenv
+requests
+google-generativeai
+PyPDF2
+python-docx
+langchain
+langchain-community
+tiktoken
+chromadb
