@@ -8,3 +8,7 @@ langchain
 langchain-community
 tiktoken
 chromadb
+psycopg2-binary
+sqlalchemy
+beautifulsoup4
+pypdf
