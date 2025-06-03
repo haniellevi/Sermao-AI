@@ -1,19 +1,21 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
+import { ragChunks } from "@shared/schema";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export interface RagChunk {
-  id: string;
+  id: number;
   documentId: string;
   chunkText: string;
-  embedding: number[];
+  embeddingVector: string;
   sourceUrl?: string;
   pageNumber?: number;
   userId: number;
 }
 
 export class RagService {
-  private chunks: Map<string, RagChunk[]> = new Map();
 
   // Generate embeddings using Gemini AI
   async generateEmbedding(text: string): Promise<number[]> {
@@ -75,7 +77,7 @@ export class RagService {
     return chunks;
   }
 
-  // Store document chunks with embeddings
+  // Store document chunks with embeddings in PostgreSQL
   async storeDocument(
     userId: number,
     documentId: string,
@@ -83,28 +85,25 @@ export class RagService {
     sourceUrl?: string
   ): Promise<void> {
     const textChunks = this.splitIntoChunks(text);
-    const ragChunks: RagChunk[] = [];
+
+    // Remove existing chunks for this document
+    await db.delete(ragChunks).where(
+      sql`${ragChunks.documentId} = ${documentId} AND ${ragChunks.userId} = ${userId}`
+    );
 
     for (let i = 0; i < textChunks.length; i++) {
       const chunk = textChunks[i];
       const embedding = await this.generateEmbedding(chunk);
       
-      ragChunks.push({
-        id: `${documentId}_${i}`,
+      await db.insert(ragChunks).values({
         documentId,
         chunkText: chunk,
-        embedding,
+        embeddingVector: JSON.stringify(embedding),
         sourceUrl,
         pageNumber: i + 1,
         userId
       });
     }
-
-    const userKey = `user_${userId}`;
-    const existingChunks = this.chunks.get(userKey) || [];
-    // Remove existing chunks for this document
-    const filteredChunks = existingChunks.filter(c => c.documentId !== documentId);
-    this.chunks.set(userKey, [...filteredChunks, ...ragChunks]);
   }
 
   // Calculate cosine similarity between two vectors
@@ -125,31 +124,51 @@ export class RagService {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
-  // Search for relevant chunks based on query
+  // Search for relevant chunks based on query using PostgreSQL
   async searchRelevantChunks(
     userId: number,
     query: string,
     topK: number = 5
   ): Promise<RagChunk[]> {
-    const userKey = `user_${userId}`;
-    const userChunks = this.chunks.get(userKey) || [];
-    
-    if (userChunks.length === 0) {
+    try {
+      const queryEmbedding = await this.generateEmbedding(query);
+      
+      // Get all chunks for user from database
+      const userChunks = await db
+        .select()
+        .from(ragChunks)
+        .where(eq(ragChunks.userId, userId));
+      
+      if (userChunks.length === 0) {
+        return [];
+      }
+
+      // Calculate similarities and rank
+      const rankedChunks = userChunks
+        .map(chunk => {
+          const chunkEmbedding = JSON.parse(chunk.embeddingVector);
+          return {
+            chunk: {
+              id: chunk.id,
+              documentId: chunk.documentId,
+              chunkText: chunk.chunkText,
+              embeddingVector: chunk.embeddingVector,
+              sourceUrl: chunk.sourceUrl || undefined,
+              pageNumber: chunk.pageNumber || undefined,
+              userId: chunk.userId
+            } as RagChunk,
+            similarity: this.cosineSimilarity(queryEmbedding, chunkEmbedding)
+          };
+        })
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, topK)
+        .map(item => item.chunk);
+
+      return rankedChunks;
+    } catch (error) {
+      console.error('Erro ao buscar chunks relevantes:', error);
       return [];
     }
-
-    const queryEmbedding = await this.generateEmbedding(query);
-    
-    const rankedChunks = userChunks
-      .map(chunk => ({
-        chunk,
-        similarity: this.cosineSimilarity(queryEmbedding, chunk.embedding)
-      }))
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK)
-      .map(item => item.chunk);
-
-    return rankedChunks;
   }
 
   // Get enhanced context for sermon generation
@@ -178,21 +197,33 @@ export class RagService {
   }
 
   // Remove all chunks for a user
-  clearUserDocuments(userId: number): void {
-    const userKey = `user_${userId}`;
-    this.chunks.delete(userKey);
+  async clearUserDocuments(userId: number): Promise<void> {
+    try {
+      await db.delete(ragChunks).where(eq(ragChunks.userId, userId));
+    } catch (error) {
+      console.error('Erro ao remover documentos do usuário:', error);
+      throw error;
+    }
   }
 
   // Get document statistics for a user
-  getUserDocumentStats(userId: number): { documentCount: number; chunkCount: number } {
-    const userKey = `user_${userId}`;
-    const userChunks = this.chunks.get(userKey) || [];
-    const uniqueDocuments = new Set(userChunks.map(c => c.documentId));
-    
-    return {
-      documentCount: uniqueDocuments.size,
-      chunkCount: userChunks.length
-    };
+  async getUserDocumentStats(userId: number): Promise<{ documentCount: number; chunkCount: number }> {
+    try {
+      const userChunks = await db
+        .select()
+        .from(ragChunks)
+        .where(eq(ragChunks.userId, userId));
+      
+      const uniqueDocuments = new Set(userChunks.map(c => c.documentId));
+      
+      return {
+        documentCount: uniqueDocuments.size,
+        chunkCount: userChunks.length
+      };
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas do usuário:', error);
+      return { documentCount: 0, chunkCount: 0 };
+    }
   }
 }
 

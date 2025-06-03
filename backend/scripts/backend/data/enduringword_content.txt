@@ -1,0 +1,7 @@
+Comentário Enduring Word
+
+Este é um conteúdo de exemplo para demonstrar o sistema RAG.
+Em produção, substitua este conteúdo por comentários bíblicos reais.
+
+Exemplo de comentário sobre Gênesis 1:1:
+No princípio criou Deus os céus e a terra. Este versículo estabelece a base para toda a teologia bíblica, demonstrando que Deus é o criador soberano de todas as coisas. A palavra 'Elohim' no hebraico indica a majestade e poder divino.

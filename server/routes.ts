@@ -999,7 +999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const stats = ragService.getUserDocumentStats(userId);
+      const stats = await ragService.getUserDocumentStats(userId);
       
       res.json({
         message: `${documentsProcessed} documento(s) processado(s) com sucesso`,
