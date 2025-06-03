@@ -464,13 +464,38 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.
     }
 
     try {
-      return JSON.parse(cleanedResponse);
+      const parsedResponse = JSON.parse(cleanedResponse);
+      
+      // Validate that the response has the expected structure
+      if (!parsedResponse.sermao) {
+        throw new Error('Resposta inválida: campo "sermao" não encontrado');
+      }
+      
+      return parsedResponse;
     } catch (parseError) {
       console.error('Erro ao processar resposta do sermão:', parseError);
       console.error('Resposta original:', response);
       console.error('Resposta limpa:', cleanedResponse);
 
-      // Fallback response
+      // Try to extract sermon content manually if JSON parsing fails
+      const sermonMatch = response.match(/"sermao":\s*"([^"]*(?:\\.[^"]*)*)"/);
+      if (sermonMatch) {
+        const extractedSermon = sermonMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        return {
+          sermao: extractedSermon,
+          sugestoes_enriquecimento: [
+            "Incluir testemunhos pessoais relevantes ao tema",
+            "Adicionar ilustrações visuais ou objetos para demonstração",
+            "Promover momentos de oração e reflexão pessoal"
+          ],
+          avaliacao_qualidade: {
+            nota: 7.0,
+            justificativa: "Sermão extraído com sucesso, mas com formato parcialmente recuperado."
+          }
+        };
+      }
+
+      // Final fallback response
       return {
         sermao: "## Sermão Gerado\n\nDevido a problemas técnicos, o sermão não pôde ser gerado completamente. Por favor, tente novamente.",
         sugestoes_enriquecimento: [
