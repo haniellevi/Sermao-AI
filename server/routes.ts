@@ -667,6 +667,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/sermons/:id', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const sermonId = parseInt(req.params.id);
+
+      // Verify sermon ownership
+      const existingSermon = await storage.getSermon(sermonId);
+      if (!existingSermon || existingSermon.userId !== userId) {
+        return res.status(404).json({ message: 'Sermão não encontrado' });
+      }
+
+      // Delete sermon
+      await storage.deleteSermon(sermonId);
+
+      res.json({ message: 'Sermão excluído com sucesso' });
+    } catch (error: any) {
+      console.error('Erro ao excluir sermão:', error);
+      res.status(500).json({ message: 'Falha ao excluir sermão' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

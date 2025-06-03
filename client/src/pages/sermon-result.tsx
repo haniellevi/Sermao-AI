@@ -3,14 +3,26 @@ import { useLocation, useParams } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/layout/navbar';
-import { FileText, Copy, Star, Lightbulb, ArrowLeft } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { FileText, Copy, Star, Lightbulb, ArrowLeft, Trash2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { exportToPDF, exportToDOCX } from '@/lib/exportUtils';
 
 export default function SermonResultPage() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const params = useParams();
   const sermonId = params.id;
 
@@ -99,6 +111,43 @@ export default function SermonResultPage() {
         description: "Não foi possível exportar o sermão em DOCX.",
         variant: "destructive",
       });
+    }
+  };
+
+  const deleteSermonMutation = useMutation({
+    mutationFn: async (sermonId: string) => {
+      const response = await fetch(`/api/sermons/${sermonId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Falha ao excluir sermão');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sermão excluído!",
+        description: "O sermão foi excluído com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/sermons'] });
+      navigate('/dashboard');
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o sermão.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteSermon = () => {
+    if (sermonId) {
+      deleteSermonMutation.mutate(sermonId);
     }
   };
 
