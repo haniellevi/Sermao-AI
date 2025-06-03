@@ -41,6 +41,8 @@ interface AuthRequest extends Express.Request {
   body: any;
   params: any;
   headers: any;
+  method: string;
+  url: string;
 }
 
 const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
@@ -51,8 +53,8 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
     hasAuthHeader: !!authHeader,
     hasToken: !!token,
     tokenLength: token ? token.length : 0,
-    method: req.method,
-    url: req.url
+    method: (req as any).method,
+    url: (req as any).url
   });
 
   if (!token) {
