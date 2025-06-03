@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
 import { storage } from "./storage";
 import { 
   loginSchema, 
@@ -92,7 +94,7 @@ const comparePassword = async (password: string, hash: string): Promise<boolean>
   return bcrypt.compare(password, hash);
 };
 
-// AI helper function
+// AI helper functions
 const callGemini = async (prompt: string, isLongForm = false): Promise<string> => {
   try {
     const model = genAI.getGenerativeModel({ 
@@ -106,6 +108,41 @@ const callGemini = async (prompt: string, isLongForm = false): Promise<string> =
     return responseText;
   } catch (error: any) {
     console.error('Gemini AI error:', error);
+
+    // Check if it's a quota exceeded error
+    if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('Too Many Requests')) {
+      throw new Error('Limite de uso da IA atingido. Uma nova chave de API é necessária para continuar gerando sermões.');
+    }
+
+    throw new Error('Falha na comunicação com a IA');
+  }
+};
+
+const callGeminiChatModel = async (messages: any[], isLongForm = false): Promise<string> => {
+  try {
+    const model = genAI.getGenerativeModel({ 
+      model: isLongForm ? "gemini-1.5-pro" : "gemini-1.5-flash" 
+    });
+
+    // Convert messages to Gemini format
+    const systemMessage = messages.find(m => m.role === 'system');
+    const userMessage = messages.find(m => m.role === 'user');
+    
+    let prompt = '';
+    if (systemMessage) {
+      prompt += systemMessage.parts[0].text + '\n\n';
+    }
+    if (userMessage) {
+      prompt += userMessage.parts[0].text;
+    }
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const responseText = response.text();
+
+    return responseText;
+  } catch (error: any) {
+    console.error('Gemini AI Chat error:', error);
 
     // Check if it's a quota exceeded error
     if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('Too Many Requests')) {
@@ -317,6 +354,10 @@ const generateSermonWithAI = async (request: any): Promise<any> => {
   try {
     const { theme, purpose, audience, duration, style, context, referenceUrls, dnaType, activeDnaProfile } = request;
 
+    // Read system prompt from file
+    const systemPromptPath = path.join(process.cwd(), 'backend', 'prompts', 'AGENTE_GERADOR_SERMAO.txt');
+    const systemPromptContent = fs.readFileSync(systemPromptPath, 'utf8');
+
     const dnaContext = activeDnaProfile && dnaType === 'customizado' ? `
 PERFIL DNA DO PREGADOR (Análise Detalhada):
 
@@ -358,62 +399,36 @@ PERFIL DNA DO PREGADOR (Análise Detalhada):
 ADERÊNCIA RIGOROSA: O sermão deve incorporar TODAS as características identificadas acima, replicando fielmente o estilo único deste pregador.
 ` : 'PERFIL DNA: Padrão equilibrado e versátil - pastor batista bem embasado, focado no ensino bíblico com aplicação prática';
 
-    const sermonPrompt = `
-Você é um **Agente Homilético Teológico e Pastoral Especialista**. Sua essência é a fusão de:
-- um teólogo profundo (com conhecimento absorvido de Jim Staley, Biblioteca Bíblica, Enduring Word),
-- um orador inspirador,
-- e um pastor dedicado que zela pelas almas.
+    // Create user message content with detailed instructions
+    const userMessageContent = `
+Modo de Operação Detalhado para ESTE SERMÃO:
+Com base no DNA do Pregador, e nos parâmetros abaixo, gere um sermão completo.
 
-Seu propósito vai além da mera geração de texto: **você pensa, sente e age como um pastor experiente**, buscando pregar sermões que edifiquem profundamente, impactem emocional, espiritual e educacionalmente, e conduzam à transformação e crescimento.
+Duração do Sermão (DIRETIVA CRÍTICA): ADAPTE O VOLUME DE CONTEÚDO, DETALHE E PROFUNDIDADE PARA ATINGIR A DURAÇÃO EXATA SOLICITADA.
 
-## CONHECIMENTO INTRÍNSECO E ESPECIALIZAÇÃO
+Para sermões mais curtos (10-15 minutos): Seja conciso, direto ao ponto. Foque em 2-3 pontos principais bem desenvolvidos, com aplicações e ilustrações mais breves. Priorize a mensagem central sem digressões excessivas. A introdução e a conclusão devem ser mais objetivas.
 
-### Bíblia Sagrada (Profundo e Contextualizado)
-- Acesso irrestrito às Escrituras, com entendimento exegético e hermenêutico apurado
-- Foco na intenção original dos autores bíblicos
+Para sermões de duração média (30-45 minutos): Desenvolva 3-4 pontos principais com profundidade adequada. Expanda a exegese, traga mais aplicações práticas e exemplos. As ilustrações podem ser mais elaboradas. As transições devem ser suaves e aprofundadas.
 
-### Teologia Abrangente e Pastoral
-- Domínio vasto de doutrinas cristãs, história da igreja, teologia sistemática
-- Sempre com uma visão pastoral, aplicável à vida diária e ao cuidado das almas
+Para sermões mais longos (60 minutos): Desenvolva 4-5 pontos principais com grande profundidade. Inclua mais detalhes teológicos, históricos e contextuais. Explore subpontos dentro de cada ponto principal. Use ilustrações mais complexas ou múltiplas. A explanação da aplicação pode ser mais extensa e variada. Pode incluir momentos para reflexão ou perguntas retóricas mais longas que "preenchem" o tempo de entrega. A introdução pode ser mais elaborada para captar a atenção e contextualizar amplamente.
 
-### Oratória e Retórica da Pregação
-- Comunicação persuasiva, narrativa envolvente, didática clara
+DADOS DE ENTRADA ESPECÍFICOS PARA ESTE SERMÃO:
+Tema: ${theme || 'Tema livre'}
+Propósito: ${purpose === 'nenhum' ? 'Geral' : purpose}
+Público-alvo: ${audience === 'nenhum' ? 'Congregação geral' : audience}
+Duração: ${duration === 'nenhum' ? '30-45 minutos' : duration}
+Estilo: ${style === 'nenhum' ? 'Expositivo' : style}
+Contexto: ${context === 'nenhum' ? 'Culto regular' : context}
+URLs de Referência: ${referenceUrls || 'Nenhuma'}
 
+DNA DO PREGADOR (Perfil Completo):
 ${dnaContext}
 
-## DADOS DO SERMÃO:
-- Tema: ${theme || 'Tema livre'}
-- Propósito: ${purpose === 'nenhum' ? 'Geral' : purpose}
-- Audiência: ${audience === 'nenhum' ? 'Congregação geral' : audience}
-- Duração: ${duration === 'nenhum' ? '30-45 minutos' : duration}
-- Estilo: ${style === 'nenhum' ? 'Expositivo' : style}
-- Contexto: ${context === 'nenhum' ? 'Culto regular' : context}
-- URLs de Referência: ${referenceUrls || 'Nenhuma'}
+Formato de Resposta (JSON - ESTRITAMENTE NESTE FORMATO):
+Retorne APENAS o JSON, sem texto adicional antes ou depois.
 
-## FILOSOFIA E ABORDAGEM NA GERAÇÃO DO SERMÃO
-
-### Pense e Sinta como um Pastor
-- Empatia genuína com o público
-- Foco na edificação, transformação e cuidado pastoral
-
-### Evite "Clichês de IA" (Diretiva Rigorosa)
-- PROIBIDO: "Em suma", "Dessa forma", "Podemos concluir que", etc.
-- Linguagem deve ser: Natural, original, fluída, profunda e com alma pastoral
-
-### Impacto Máximo e Triplo
-1. **Emocional**: Conexão com o coração
-2. **Espiritual**: Reflexão e santificação  
-3. **Educacional**: Clareza e conhecimento bíblico
-
-## ESTILOS DE PREGAÇÃO:
-- **Expositiva**: Versículo por versículo, foco na intenção do autor bíblico
-- **Temática**: Um tema central sustentado por múltiplas passagens
-- **Narrativa**: Recontagem dramática de histórias bíblicas com aplicação prática
-- **Textual**: Expansão profunda de poucos versículos
-
-Formato de Resposta (APENAS JSON):
 {
-  "sermao": "Texto completo do sermão gerado, **JÁ FORMATADO em LINGUAGEM NATURAL, como um post de blog**. Utilize títulos, subtítulos, parágrafos espaçados, e uso estratégico de negrito/itálico para máxima legibilidade e impacto. Exemplos de formatação: \\n\\n## Título do Sermão: A Esperança que Transforma\\n\\n### Introdução: Onde Encontramos Refúgio?\\n\\n[Primeiro parágrafo da introdução...]\\n\\n### Ponto 1: A Natureza da Verdadeira Esperança\\n\\n**Hebreus 11:1** - _'Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.'_\\n\\n[Explanação do ponto...]\\n\\n### Conclusão: Uma Chamada à Ação Transformadora\\n\\n[Último parágrafo da conclusão...]",
+  "sermao": "Texto completo do sermão gerado, JÁ FORMATADO em LINGUAGEM NATURAL, como um post de blog. Utilize títulos, subtítulos, parágrafos espaçados, e uso estratégico de negrito/itálico para máxima legibilidade e impacto. Exemplos de formatação: \\n\\n## Título do Sermão: A Esperança que Transforma\\n\\n### Introdução: Onde Encontramos Refúgio?\\n\\n[Primeiro parágrafo da introdução...]\\n\\n### Ponto 1: A Natureza da Verdadeira Esperança\\n\\n**Hebreus 11:1** - _'Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.'_\\n\\n[Explanação do ponto...]\\n\\n### Conclusão: Uma Chamada à Ação Transformadora\\n\\n[Último parágrafo da conclusão...]",
   "sugestoes_enriquecimento": [
     "Sugestão 1: Descrição da ilustração/metáfora/dinâmica.",
     "Sugestão 2: Descrição da ilustração/metáfora/dinâmica."
@@ -422,22 +437,15 @@ Formato de Resposta (APENAS JSON):
     "nota": "Número de 0 a 10, pode ser decimal (ex: 9.2)",
     "justificativa": "Breve texto com pontos fortes e sugestões de melhoria."
   }
-}
+}`;
 
-## CRITÉRIOS DE AVALIAÇÃO (Nota 0-10):
-1. Aderência perfeita ao DNA
-2. Solidez bíblica e teológica
-3. Clareza e compreensão
-4. Relevância e aplicação pastoral
-5. Poder persuasivo e emocional
-6. Originalidade e autenticidade
-7. Coerência e fluidez
-8. Impacto pastoral integral
-9. Adequação à duração solicitada
+    // Create messages for Gemini
+    const messagesForGemini = [
+      { "role": "system", "parts": [{ "text": systemPromptContent }] },
+      { "role": "user", "parts": [{ "text": userMessageContent }] }
+    ];
 
-Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
-
-    const response = await callGemini(sermonPrompt, true);
+    const response = await callGeminiChatModel(messagesForGemini, true);
 
     // Clean and parse the response
     let cleanedResponse = response.trim();

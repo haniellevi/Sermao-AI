@@ -1,0 +1,68 @@
+Modificar a função generateSermonWithAI em server/server.js para usar a estratégia de mensagens de sistema e usuário ao chamar a API do Gemini. Assegure-se de que o prompt da instrução do sistema seja lido do arquivo backend/prompts/AGENTE_GERADOR_SERMAO.txt.
+
+Instruções para o Replit AI:
+
+Modifique o arquivo `server/server.js`.
+
+1.  **Encontre a Função `generateSermonWithAI`:** Localize a definição desta função.
+
+2.  **Modifique a Lógica de Preparação do Prompt:**
+    * No início da função `generateSermonWithAI`, adicione código para **ler o conteúdo do arquivo `backend/prompts/AGENTE_GERADOR_SERMAO.txt`** para uma variável chamada `systemPromptContent`. Use `with open(...) as f: systemPromptContent = f.read()`.
+    * **Remova QUALQUER código antigo** que construa o `sermonPrompt` gigante como uma única string `dnaPrompt` ou `sermonPrompt` usando f-string ou concatenação direta para a chamada final da IA.
+    * **Crie uma nova string `userMessageContent`.** Esta string deve ser uma f-string Python que contenha:
+        * A seção "Modo de Operação Detalhado para ESTE SERMÃO" (Duração, etc.).
+        * A seção "DADOS DE ENTRADA ESPECÍFICOS PARA ESTE SERMÃO".
+        * A seção "DNA DO PREGADOR (Perfil Completo)".
+        * A seção "Formato de Resposta (JSON - ESTRICTAMENTE NESTE FORMATO)".
+        * **INJETE DINAMICAMENTE as variáveis Python** (como `inferredTheme`, `inferredPurpose`, `inferredAudience`, `inferredDuration`, `inferredStyle`, `inferredContext`, `bibleVerses`, `referenceInsights`, `dnaContext`) DENTRO de `userMessageContent`. Use a sintaxe correta para f-strings.
+
+3.  **Modifique a Chamada à IA:**
+    * Localize a linha onde a API do Gemini é chamada (atualmente `callGemini(sermonPrompt, true);`).
+    * Altere esta chamada para usar uma nova estrutura de mensagens. A nova chamada deve ser `callGeminiChatModel(messagesForGemini, true);`.
+    * Defina `messagesForGemini` **IMEDIATAMENTE ANTES** desta chamada, com a seguinte estrutura:
+        ```python
+        messagesForGemini = [
+            {"role": "system", "parts": [{"text": systemPromptContent}]},
+            {"role": "user", "parts": [{"text": userMessageContent}]}
+        ]
+        ```
+
+4.  **Assuma a Função `callGeminiChatModel`:**
+    * Para esta modificação, assuma que a função `callGeminiChatModel` existe e está disponível para ser chamada. Não a crie nem a modifique neste prompt, apenas a use.
+
+**Exemplo de Como o `userMessageContent` Deve Ser Construído:**
+
+Modo de Operação Detalhado para ESTE SERMÃO:
+Com base no DNA do Pregador, e nos parâmetros abaixo, gere um sermão completo.
+Duração do Sermão (DIRETIVA CRÍTICA): ADAPTE O VOLUME DE CONTEÚDO, DETALHE E PROFUNDIDADE PARA ATINGIR A DURAÇÃO EXATA SOLICITADA.
+
+Para sermões mais curtos (10-15 minutos): Seja conciso, direto ao ponto. Foque em 2-3 pontos principais bem desenvolvidos, com aplicações e ilustrações mais breves. Priorize a mensagem central sem digressões excessivas. A introdução e a conclusão devem ser mais objetivas.
+Para sermões de duração média (30-45 minutos): Desenvolva 3-4 pontos principais com profundidade adequada. Expanda a exegese, traga mais aplicações práticas e exemplos. As ilustrações podem ser mais elaboradas. As transições devem ser suaves e aprofundadas.
+Para sermões mais longos (60 minutos): Desenvolva 4-5 pontos principais com grande profundidade. Inclua mais detalhes teológicos, históricos e contextuais. Explore subpontos dentro de cada ponto principal. Use ilustrações mais complexas ou múltiplas. A explanação da aplicação pode ser mais extensa e variada. Pode incluir momentos para reflexão ou perguntas retóricas mais longas que "preenchem" o tempo de entrega. A introdução pode ser mais elaborada para captar a atenção por mais tempo, e a conclusão mais rica em apelos e resumo.
+DADOS DE ENTRADA ESPECÍFICOS PARA ESTE SERMÃO:
+Tema: {inferredTheme}
+Propósito: {inferredPurpose}
+Público-alvo: {inferredAudience}
+Duração: {inferredDuration}
+Estilo: {inferredStyle}
+Contexto: {inferredContext}
+Versículos Bíblicos Selecionados: {", ".join(bibleVerses) if bibleVerses else "Nenhum"}
+Insights de Sermões de Referência: {referenceInsights}
+
+DNA DO PREGADOR (Perfil Completo):
+{dnaContext}
+
+Formato de Resposta (JSON - ESTRICTAMENTE NESTE FORMATO):
+Retorne APENAS o JSON, sem texto adicional antes ou depois.
+
+{{
+"sermão": "Texto completo do sermão gerado, JÁ FORMATADO em LINGUAGEM NATURAL, como um post de blog. Utilize títulos, subtítulos, parágrafos espaçados, e uso estratégico de negrito/itálico para máxima legibilidade e impacto. Exemplos de formatação: \n\n## Título do Sermão: A Esperança que Transforma\n\n### Introdução: Onde Encontramos Refúgio?\n\n[Primeiro parágrafo da introdução...]\n\n### Ponto 1: A Natureza da Verdadeira Esperança\n\nHebreus 11:1 - 'Ora, a fé é a certeza daquilo que esperamos e a prova das coisas que não vemos.'\n\n[Explanação do ponto...]\n\n### Conclusão: Uma Chamada à Ação Transformadora\n\n[Último parágrafo da conclusão...]",
+"sugestoes_enriquecimento": [
+"Sugestão 1: Descrição da ilustração/metáfora/dinâmica.",
+"Sugestão 2: Descrição da ilustração/metáfora/dinâmica."
+],
+"avaliacao_qualidade": {
+"nota": "Número de 0 a 10, pode ser decimal (ex: 9.2)",
+"justificativa": "Breve texto com pontos fortes e sugestões de melhoria."
+}
+}}

@@ -16,7 +16,7 @@ import GenerateSermonPage from "@/pages/generate-sermon";
 import SermonResultPage from "@/pages/sermon-result";
 import HistoryPage from "@/pages/history";
 import EditSermonPage from "@/pages/edit-sermon";
-import AdminPage from "@/pages/admin";
+
 import NotFound from "@/pages/not-found";
 
 function Router() {
