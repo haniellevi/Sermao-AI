@@ -1,0 +1,30 @@
+Componentes Principais do Painel Administrativo:
+
+Frontend do Painel: Uma nova seção/aplicativo React (ou HTML/CSS/JS simples, se preferir algo mais leve) dentro do seu projeto Replit, separada do frontend do usuário final.
+Backend do Painel (APIs Protegidas): Novas rotas Flask (Python) que só administradores podem acessar, interagindo com o banco de dados e os serviços existentes.
+Lógica de Administrador: Funções no backend para gerenciar dados e exibir relatórios.
+Diferenciais e Funcionalidades do Painel Administrativo:
+Controle de Acesso (APENAS PARA ADMINS):
+Autenticação Separada/Baseada em Função: O painel deve ter seu próprio sistema de login ou usar o sistema existente, mas com uma verificação de "role" (papel) para garantir que apenas usuários com role: 'admin' possam acessá-lo. Você adicionaria um campo role (ex: 'user', 'admin') ao seu modelo User no banco de dados.
+Login de Admin: Um formulário de login específico para administradores, que verificaria essa role.
+Gerenciamento de Usuários:
+Listar Usuários: Tabela com informações de todos os usuários (ID, e-mail, nome, data de cadastro, active_dna_profile_id).
+Visualizar DNA de Usuário: Capacidade de ver o customAttributes (DNA) de qualquer usuário.
+Bloquear/Desbloquear Acesso: Botões para desativar/ativar a conta de um usuário (adicionar um campo is_active ao modelo User).
+Deletar Usuário: (Com confirmação!).
+Controle da Base de Conhecimento RAG:
+Listar Documentos RAG: Ver quais documentos (URLs, arquivos) foram indexados na tabela rag_chunks.
+Adicionar Novas Fontes (Indexação Manual/Batch): Formulário para um administrador adicionar novas URLs de sites ou fazer upload de arquivos PDF/TXT/DOCX para serem indexados na base RAG. Isso chamaria a lógica do rag_indexer.py no backend.
+Remover Fontes: Opção para remover documentos específicos da base RAG.
+Status de Indexação: Exibir o status da última indexação (sucesso/falha).
+Dashboard de Relatórios:
+Gráficos/Métricas Chave:
+Total de Usuários: Número de usuários registrados.
+Usuários Ativos (últimos 30 dias): Métricas de atividade.
+Sermões Totais Gerados: Contagem total de sermões criados.
+Sermões Gerados por Período: Gráfico de linha (diário, semanal, mensal).
+Uso de DNA (Padrão vs. Customizado): Percentual.
+Temas Mais Populares: Top 5/10 temas de sermões.
+Avaliação Média dos Sermões: Nota média das autoavaliações da IA.
+Uso da API Gemini: Gráfico de tokens consumidos.
+Tabela de Últimos Sermões: Lista dos sermões mais recentes gerados (com links para ver detalhes).

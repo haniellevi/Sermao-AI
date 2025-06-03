@@ -19,6 +19,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
+  role: varchar("role", { length: 20 }).default("user"),
+  isActive: boolean("is_active").default(true),
   activeDnaProfileId: integer("active_dna_profile_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });

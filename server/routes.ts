@@ -18,6 +18,9 @@ import {
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ragService } from "./ragService";
 import { ChromaClient } from 'chromadb';
+import { db } from "./db";
+import { users, sermons, dnaProfiles, ragChunks } from "@shared/schema";
+import { sql, eq } from "drizzle-orm";
 
 // Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'sermon-generator-secret';
@@ -1034,6 +1037,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Erro ao remover documentos RAG:', error);
       res.status(500).json({ message: 'Falha ao remover documentos' });
+    }
+  });
+
+  // Admin authentication middleware
+  const isAdmin = async (req: AuthRequest, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'admin' || !user.isActive) {
+        return res.status(403).json({ message: "Access denied - Admin role required" });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Admin auth error:', error);
+      res.status(500).json({ message: "Authentication error" });
+    }
+  };
+
+  // Admin Dashboard - Get statistics
+  app.get('/api/admin/dashboard', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      // Get user statistics
+      const totalUsers = await db.select({ count: sql`count(*)` }).from(users);
+      const activeUsers = await db.select({ count: sql`count(*)` })
+        .from(users)
+        .where(sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`);
+      
+      // Get sermon statistics  
+      const totalSermons = await db.select({ count: sql`count(*)` }).from(sermons);
+      const recentSermons = await db.select()
+        .from(sermons)
+        .orderBy(sql`${sermons.createdAt} DESC`)
+        .limit(10);
+
+      // Get DNA usage stats
+      const customDnaCount = await db.select({ count: sql`count(*)` })
+        .from(dnaProfiles)
+        .where(eq(dnaProfiles.type, "customizado"));
+      
+      const totalDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles);
+
+      // Get RAG statistics
+      const ragStats = await ragService.getUserDocumentStats(1); // Global stats
+
+      res.json({
+        users: {
+          total: totalUsers[0]?.count || 0,
+          active: activeUsers[0]?.count || 0
+        },
+        sermons: {
+          total: totalSermons[0]?.count || 0,
+          recent: recentSermons
+        },
+        dna: {
+          custom: customDnaCount[0]?.count || 0,
+          total: totalDnaProfiles[0]?.count || 0
+        },
+        rag: ragStats
+      });
+    } catch (error: any) {
+      console.error('Admin dashboard error:', error);
+      res.status(500).json({ message: 'Falha ao buscar estatísticas' });
+    }
+  });
+
+  // Admin Users Management - List all users
+  app.get('/api/admin/users', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const allUsers = await db.select().from(users).orderBy(sql`${users.createdAt} DESC`);
+      res.json(allUsers);
+    } catch (error: any) {
+      console.error('Admin users list error:', error);
+      res.status(500).json({ message: 'Falha ao buscar usuários' });
+    }
+  });
+
+  // Admin Users Management - Get user details with DNA
+  app.get('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+
+      const dnaProfiles = await storage.getDnaProfilesByUserId(userId);
+      const userSermons = await storage.getSermonsByUserId(userId);
+
+      res.json({
+        user,
+        dnaProfiles,
+        sermons: userSermons.slice(0, 10) // últimos 10 sermões
+      });
+    } catch (error: any) {
+      console.error('Admin user details error:', error);
+      res.status(500).json({ message: 'Falha ao buscar detalhes do usuário' });
+    }
+  });
+
+  // Admin Users Management - Update user status
+  app.patch('/api/admin/users/:id/status', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { isActive } = req.body;
+
+      const updatedUser = await storage.updateUser(userId, { isActive });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+
+      res.json({
+        message: `Usuário ${isActive ? 'ativado' : 'desativado'} com sucesso`,
+        user: updatedUser
+      });
+    } catch (error: any) {
+      console.error('Admin user status update error:', error);
+      res.status(500).json({ message: 'Falha ao atualizar status do usuário' });
+    }
+  });
+
+  // Admin Users Management - Delete user
+  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+
+      // Delete user (cascade will handle related data)
+      await db.delete(users).where(eq(users.id, userId));
+
+      res.json({ message: 'Usuário deletado com sucesso' });
+    } catch (error: any) {
+      console.error('Admin user delete error:', error);
+      res.status(500).json({ message: 'Falha ao deletar usuário' });
+    }
+  });
+
+  // Admin RAG Management - List RAG documents
+  app.get('/api/admin/rag/documents', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const documents = await db.select().from(ragChunks)
+        .orderBy(sql`${ragChunks.createdAt} DESC`);
+      
+      // Group by document_id
+      const groupedDocs = documents.reduce((acc: any, chunk) => {
+        if (!acc[chunk.documentId]) {
+          acc[chunk.documentId] = {
+            documentId: chunk.documentId,
+            sourceUrl: chunk.sourceUrl,
+            userId: chunk.userId,
+            chunkCount: 0,
+            createdAt: chunk.createdAt
+          };
+        }
+        acc[chunk.documentId].chunkCount++;
+        return acc;
+      }, {});
+
+      res.json(Object.values(groupedDocs));
+    } catch (error: any) {
+      console.error('Admin RAG documents error:', error);
+      res.status(500).json({ message: 'Falha ao buscar documentos RAG' });
+    }
+  });
+
+  // Admin RAG Management - Delete RAG document
+  app.delete('/api/admin/rag/documents/:documentId', isAuthenticated, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const documentId = req.params.documentId;
+      
+      await db.delete(ragChunks).where(eq(ragChunks.documentId, documentId));
+      
+      res.json({ message: 'Documento RAG removido com sucesso' });
+    } catch (error: any) {
+      console.error('Admin RAG delete error:', error);
+      res.status(500).json({ message: 'Falha ao remover documento RAG' });
+    }
+  });
+
+  // Admin RAG Management - Bulk index documents
+  app.post('/api/admin/rag/bulk-index', isAuthenticated, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res) => {
+    try {
+      const files = req.files as Express.Multer.File[] || [];
+      const adminUserId = req.user!.claims.sub;
+      
+      if (files.length === 0) {
+        return res.status(400).json({ message: 'Nenhum documento foi enviado' });
+      }
+
+      let documentsProcessed = 0;
+      const errors: string[] = [];
+
+      for (const file of files) {
+        try {
+          const documentId = `admin_doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const text = file.buffer.toString('utf-8');
+          
+          // Store document in RAG service for all users (userId = 0 for global)
+          await ragService.storeDocument(0, documentId, text, file.originalname);
+          documentsProcessed++;
+        } catch (error: any) {
+          errors.push(`Erro ao processar ${file.originalname}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        message: `${documentsProcessed} documento(s) processado(s) com sucesso`,
+        documentsProcessed,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error('Admin bulk index error:', error);
+      res.status(500).json({ message: 'Falha no processamento em lote' });
     }
   });
 

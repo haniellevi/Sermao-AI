@@ -18,6 +18,7 @@ import SermonResultPage from "@/pages/sermon-result";
 import HistoryPage from "@/pages/history";
 import EditSermonPage from "@/pages/edit-sermon";
 import DocumentLibraryPage from "@/pages/document-library";
+import AdminDashboardPage from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/history" component={HistoryPage} />
       <Route path="/edit-sermon/:id" component={EditSermonPage} />
       <Route path="/document-library" component={DocumentLibraryPage} />
+      <Route path="/admin" component={AdminDashboardPage} />
       <Route component={NotFound} />
     </Switch>
   );

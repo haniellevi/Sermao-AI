@@ -130,6 +130,30 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+
+          {/* Admin Panel Card - Only show for admin users */}
+          {user?.role === 'admin' && (
+            <Link href="/admin">
+              <Card className="shadow-lg hover:shadow-xl transition-all cursor-pointer group border-red-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="bg-red-100 rounded-full p-3 group-hover:bg-red-200 transition-colors">
+                      <Shield className="w-8 h-8 text-red-600" />
+                    </div>
+                    <div className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                      ADMIN
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Painel Administrativo</h3>
+                  <p className="text-gray-600 text-sm mb-4">Gerenciar usuários e sistema</p>
+                  <div className="flex items-center text-red-600 text-sm font-medium group-hover:text-red-500">
+                    <span>Acessar painel</span>
+                    <div className="ml-2 transform group-hover:translate-x-1 transition-transform">→</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
 
         {/* Recent Activity */}
