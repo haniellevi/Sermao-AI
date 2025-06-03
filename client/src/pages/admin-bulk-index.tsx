@@ -160,16 +160,26 @@ export default function AdminBulkIndexPage() {
         });
       }, 2000);
 
-      const response = await apiUpload("/api/admin/rag/bulk-index", formData);
+      const response = await fetch('/api/admin/rag/bulk-index', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
 
       clearInterval(progressInterval);
       clearInterval(timeInterval);
       setProgress(100);
       setCurrentFile('Concluído');
-      setResults(response.results || []);
+      setResults(data.results || []);
 
-      const successCount = response.successful || 0;
-      const totalCount = response.processed || 0;
+      const successCount = data.successful || 0;
+      const totalCount = data.processed || 0;
 
       toast({
         title: "Processamento Concluído",
