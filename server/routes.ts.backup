@@ -43,7 +43,6 @@ interface AuthRequest extends Express.Request {
   headers: any;
   method: string;
   url: string;
-  query: any;
 }
 
 const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
@@ -1263,7 +1262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin RAG Management - Bulk index documents
-  app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res: any) => {
+  app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res) => {
     try {
       const files = req.files as Express.Multer.File[] || [];
       const adminUserId = req.user!.id;
@@ -1315,7 +1314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Reports - Get system reports
-  app.get('/api/admin/reports', authenticateToken, isAdmin, async (req: AuthRequest, res: any) => {
+  app.get('/api/admin/reports', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const period = req.query.period as string || 'month';
       
@@ -1347,9 +1346,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recentSermons = await db.select({ count: sql`count(*)` }).from(sermons)
         .where(sql`${sermons.createdAt} >= ${startDate}`);
       
-      const totalUsersCount = Number(totalUsers[0]?.count) || 0;
-      const totalSermonsCount = Number(totalSermons[0]?.count) || 0;
-      const avgSermonsPerUser = totalUsersCount > 0 ? totalSermonsCount / totalUsersCount : 0;
+      const avgSermonsPerUser = totalUsers[0]?.count > 0 
+        ? (totalSermons[0]?.count || 0) / (totalUsers[0]?.count || 1) 
+        : 0;
 
       // Top themes (simplified - would need proper theme extraction)
       const topThemes = [
@@ -1365,8 +1364,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const defaultDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles)
         .where(eq(dnaProfiles.type, 'default'));
       
-      const totalDnaCount = Number(totalDnaProfiles[0]?.count) || 0;
-      const avgProfilesPerUser = totalUsersCount > 0 ? totalDnaCount / totalUsersCount : 0;
+      const avgProfilesPerUser = totalUsers[0]?.count > 0 
+        ? (totalDnaProfiles[0]?.count || 0) / (totalUsers[0]?.count || 1) 
+        : 0;
 
       // RAG statistics
       const totalRagDocs = await db.select({ 
@@ -1374,9 +1374,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).from(ragChunks);
       const totalRagChunks = await db.select({ count: sql`count(*)` }).from(ragChunks);
       
-      const totalDocsCount = Number(totalRagDocs[0]?.count) || 0;
-      const totalChunksCount = Number(totalRagChunks[0]?.count) || 0;
-      const avgChunksPerDoc = totalDocsCount > 0 ? totalChunksCount / totalDocsCount : 0;
+      const avgChunksPerDoc = totalRagDocs[0]?.count > 0 
+        ? (totalRagChunks[0]?.count || 0) / (totalRagDocs[0]?.count || 1) 
+        : 0;
 
       // Top users by sermon count
       const topUsers = await db.select({
@@ -1392,27 +1392,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const report = {
         users: {
-          total: totalUsersCount,
-          active: Number(activeUsers[0]?.count) || 0,
-          inactive: Number(inactiveUsers[0]?.count) || 0,
-          admins: Number(adminUsers[0]?.count) || 0,
-          newThisMonth: Number(newUsers[0]?.count) || 0
+          total: parseInt(totalUsers[0]?.count) || 0,
+          active: parseInt(activeUsers[0]?.count) || 0,
+          inactive: parseInt(inactiveUsers[0]?.count) || 0,
+          admins: parseInt(adminUsers[0]?.count) || 0,
+          newThisMonth: parseInt(newUsers[0]?.count) || 0
         },
         sermons: {
-          total: totalSermonsCount,
-          thisMonth: Number(recentSermons[0]?.count) || 0,
+          total: parseInt(totalSermons[0]?.count) || 0,
+          thisMonth: parseInt(recentSermons[0]?.count) || 0,
           avgPerUser: parseFloat(avgSermonsPerUser.toFixed(1)),
           topThemes
         },
         dna: {
-          totalProfiles: totalDnaCount,
-          customProfiles: Number(customDnaProfiles[0]?.count) || 0,
-          defaultProfiles: Number(defaultDnaProfiles[0]?.count) || 0,
+          totalProfiles: parseInt(totalDnaProfiles[0]?.count) || 0,
+          customProfiles: parseInt(customDnaProfiles[0]?.count) || 0,
+          defaultProfiles: parseInt(defaultDnaProfiles[0]?.count) || 0,
           avgProfilesPerUser: parseFloat(avgProfilesPerUser.toFixed(1))
         },
         rag: {
-          totalDocuments: totalDocsCount,
-          totalChunks: totalChunksCount,
+          totalDocuments: parseInt(totalRagDocs[0]?.count) || 0,
+          totalChunks: parseInt(totalRagChunks[0]?.count) || 0,
           avgChunksPerDoc: parseFloat(avgChunksPerDoc.toFixed(1)),
           documentsByUser: [] // Could be implemented if needed
         },
@@ -1421,7 +1421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           topUsers: topUsers.map(u => ({
             userId: u.userId,
             userName: u.userName || 'Unknown',
-            sermonCount: Number(u.sermonCount) || 0
+            sermonCount: parseInt(u.sermonCount) || 0
           }))
         }
       };
