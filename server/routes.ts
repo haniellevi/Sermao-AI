@@ -1262,10 +1262,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin RAG Management - Bulk index documents
-  app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res) => {
+  app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res: any) => {
     try {
+      console.log('Starting bulk index process...');
       const files = req.files as Express.Multer.File[] || [];
       const adminUserId = req.user!.id;
+      
+      console.log(`Received ${files.length} files for bulk indexing`);
       
       if (files.length === 0) {
         return res.status(400).json({ message: 'Nenhum arquivo foi enviado' });
@@ -1274,17 +1277,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = [];
 
       for (const file of files) {
+        console.log(`Processing file: ${file.originalname}`);
         try {
-          const fileContent = file.buffer.toString('utf-8');
-          const documentId = `admin_bulk_${file.originalname}_${Date.now()}`;
+          // Validate file type
+          const allowedTypes = ['.txt', '.pdf', '.docx', '.md'];
+          const fileExt = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
           
+          if (!allowedTypes.includes(fileExt)) {
+            results.push({
+              success: false,
+              fileName: file.originalname,
+              message: `Tipo de arquivo não suportado: ${fileExt}`
+            });
+            continue;
+          }
+
+          // Extract text content based on file type
+          let fileContent: string;
+          
+          if (fileExt === '.txt' || fileExt === '.md') {
+            fileContent = file.buffer.toString('utf-8');
+          } else if (fileExt === '.pdf') {
+            // For now, treat PDF as text (you can add PDF parsing library later)
+            fileContent = file.buffer.toString('utf-8');
+          } else if (fileExt === '.docx') {
+            // For now, treat DOCX as text (you can add DOCX parsing library later)
+            fileContent = file.buffer.toString('utf-8');
+          } else {
+            fileContent = file.buffer.toString('utf-8');
+          }
+
+          // Validate content
+          if (!fileContent.trim() || fileContent.trim().length < 50) {
+            results.push({
+              success: false,
+              fileName: file.originalname,
+              message: 'Conteúdo do arquivo muito pequeno ou vazio'
+            });
+            continue;
+          }
+
+          const documentId = `admin_bulk_${file.originalname.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+          
+          console.log(`Storing document: ${documentId}`);
           await ragService.storeDocument(
             adminUserId, 
             documentId, 
-            fileContent, 
+            fileContent.trim(), 
             `bulk-upload:${file.originalname}`
           );
 
+          console.log(`Successfully indexed: ${file.originalname}`);
           results.push({
             success: true,
             fileName: file.originalname,
@@ -1292,6 +1335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
         } catch (fileError: any) {
+          console.error(`Error processing file ${file.originalname}:`, fileError);
           results.push({
             success: false,
             fileName: file.originalname,
@@ -1299,6 +1343,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
+
+      console.log(`Bulk indexing completed. Successful: ${results.filter(r => r.success).length}/${results.length}`);
 
       res.json({
         message: 'Processamento de lote concluído',
@@ -1309,7 +1355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error: any) {
       console.error('Admin bulk index error:', error);
-      res.status(500).json({ message: 'Falha no processamento em lote' });
+      res.status(500).json({ message: 'Falha no processamento em lote', error: error.message });
     }
   });
 
