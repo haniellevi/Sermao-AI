@@ -25,6 +25,7 @@ export default function AdminBulkIndexPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { user } = useAuthContext();
 
   if (!user || user.role !== 'admin') {
     return (
@@ -83,14 +84,27 @@ export default function AdminBulkIndexPage() {
       formData.append('documents', file);
     });
 
+    // Simular progresso durante upload
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + Math.random() * 15, 90));
+    }, 500);
+
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        clearInterval(progressInterval);
+        throw new Error('Token de autenticação não encontrado');
+      }
+
       const response = await fetch('/api/admin/rag/bulk-index', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       });
+
+      clearInterval(progressInterval);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -150,7 +164,7 @@ export default function AdminBulkIndexPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
                   isDragOver 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-300 hover:border-gray-400'
@@ -158,6 +172,7 @@ export default function AdminBulkIndexPage() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
+                onClick={() => document.getElementById('documents')?.click()}
               >
                 <div className="space-y-2">
                   <Upload className="h-12 w-12 mx-auto text-gray-400" />
@@ -202,10 +217,13 @@ export default function AdminBulkIndexPage() {
               {uploading && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Processando...</span>
+                    <span>Processando documentos para indexação...</span>
                     <span>{progress}%</span>
                   </div>
                   <Progress value={progress} />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Por favor, aguarde enquanto os documentos são processados e indexados na base RAG
+                  </p>
                 </div>
               )}
 

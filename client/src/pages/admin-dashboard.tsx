@@ -116,12 +116,12 @@ export default function AdminDashboard() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erro ao alterar status do usuário');
       }
-      
+
       toast({
         title: "Sucesso",
         description: `Usuário ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
       });
-      
+
       refetchUsers();
     } catch (error: any) {
       toast({
@@ -145,12 +145,12 @@ export default function AdminDashboard() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erro ao deletar usuário');
       }
-      
+
       toast({
         title: "Sucesso",
         description: "Usuário deletado com sucesso",
       });
-      
+
       refetchUsers();
     } catch (error: any) {
       toast({
@@ -174,12 +174,12 @@ export default function AdminDashboard() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erro ao remover documento');
       }
-      
+
       toast({
         title: "Sucesso",
         description: "Documento removido com sucesso",
       });
-      
+
       refetchRag();
     } catch (error: any) {
       toast({
@@ -555,7 +555,7 @@ export default function AdminDashboard() {
                     </Button>
                   </Link>
                 </div>
-                
+
                 <div className="flex items-center justify-between border rounded p-4">
                   <div>
                     <p className="font-medium">Relatórios Avançados</p>
