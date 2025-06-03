@@ -654,6 +654,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          isActive: user.isActive,
           activeDnaProfileId: user.activeDnaProfileId,
         },
         token,
@@ -688,6 +690,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: user.id,
           email: user.email,
           name: user.name,
+          role: user.role,
+          isActive: user.isActive,
           activeDnaProfileId: user.activeDnaProfileId,
         },
         token,
@@ -768,6 +772,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
+      isActive: user.isActive,
       activeDnaProfileId: user.activeDnaProfileId,
     });
   });
