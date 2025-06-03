@@ -117,6 +117,12 @@ export default function SermonResultPage() {
   const deleteSermonMutation = useMutation({
     mutationFn: async (sermonId: string) => {
       const token = localStorage.getItem('token');
+      console.log('Token being used for deletion:', token ? 'Token exists' : 'No token found');
+      
+      if (!token) {
+        throw new Error('Token de acesso necessário');
+      }
+      
       const response = await fetch(`/api/sermons/${sermonId}`, {
         method: 'DELETE',
         headers: {
@@ -124,8 +130,12 @@ export default function SermonResultPage() {
           'Authorization': `Bearer ${token}`,
         },
       });
+      
+      console.log('Delete response status:', response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('Delete error response:', errorData);
         throw new Error(errorData.message || 'Falha ao excluir sermão');
       }
       return response.json();
