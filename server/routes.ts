@@ -1043,13 +1043,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin authentication middleware
   const isAdmin = async (req: AuthRequest, res: any, next: any) => {
     try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
+      const user = req.user;
+      if (!user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin' || !user.isActive) {
+      if (user.role !== 'admin' || !user.isActive) {
         return res.status(403).json({ message: "Access denied - Admin role required" });
       }
 
@@ -1084,7 +1083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles);
 
       // Get RAG statistics
-      const ragStats = await ragService.getUserDocumentStats(1); // Global stats
+      const ragStats = await ragService.getUserDocumentStats(0); // Global stats (0 for admin view)
 
       res.json({
         users: {
@@ -1231,7 +1230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res) => {
     try {
       const files = req.files as Express.Multer.File[] || [];
-      const adminUserId = req.user!.claims.sub;
+      const adminUserId = req.user!.id;
       
       if (files.length === 0) {
         return res.status(400).json({ message: 'Nenhum documento foi enviado' });
