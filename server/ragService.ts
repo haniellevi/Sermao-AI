@@ -56,8 +56,16 @@ class RagService {
     try {
       console.log(`Storing document: ${documentId} for user: ${userId}`);
       
-      // Clean and validate text
-      const cleanText = text.trim();
+      // Clean and validate text - remover caracteres problemáticos
+      let cleanText = text.trim();
+      
+      // Remove caracteres nulos e de controle que causam problemas no PostgreSQL
+      cleanText = cleanText
+        .replace(/\x00/g, '') // Remove null bytes
+        .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ') // Remove caracteres de controle
+        .replace(/\s+/g, ' ') // Normaliza espaços múltiplos
+        .trim();
+      
       if (!cleanText || cleanText.length < 50) {
         throw new Error('Documento muito pequeno ou vazio para indexação');
       }
@@ -80,32 +88,46 @@ class RagService {
         const batchEnd = Math.min(batchStart + batchSize, chunks.length);
         const batchChunks = chunks.slice(batchStart, batchEnd);
         
-        console.log(`Processing batch ${Math.floor(batchStart / batchSize) + 1}/${Math.ceil(chunks.length / batchSize)}`);
+        const currentBatch = Math.floor(batchStart / batchSize) + 1;
+        const totalBatches = Math.ceil(chunks.length / batchSize);
+        console.log(`Processing batch ${currentBatch}/${totalBatches} for ${documentId}`);
         
         for (let i = 0; i < batchChunks.length; i++) {
           const chunkIndex = batchStart + i;
           const chunk = batchChunks[i];
           
           try {
+            // Limpar chunk antes de processar
+            const cleanChunk = chunk
+              .replace(/\x00/g, '')
+              .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            
+            if (cleanChunk.length < 30) {
+              console.log(`Skipping empty chunk ${chunkIndex + 1}`);
+              continue;
+            }
+            
             // Add delay between embeddings to prevent rate limiting and memory buildup
             if (chunkIndex > 0 && chunkIndex % 3 === 0) {
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            const embedding = await this.generateEmbedding(chunk);
+            const embedding = await this.generateEmbedding(cleanChunk);
             
             await db.insert(ragChunks).values({
               documentId: `${documentId}_chunk_${chunkIndex}`,
-              chunkText: chunk,
+              chunkText: cleanChunk,
               embeddingVector: JSON.stringify(embedding),
               sourceUrl: sourceUrl || null,
               pageNumber: chunkIndex + 1,
               userId: userId
             });
             
-            console.log(`Stored chunk ${chunkIndex + 1}/${chunks.length} for document: ${documentId}`);
+            console.log(`✅ Stored chunk ${chunkIndex + 1}/${chunks.length} for ${documentId}`);
           } catch (chunkError) {
-            console.error(`Error storing chunk ${chunkIndex} for document ${documentId}:`, chunkError);
+            console.error(`❌ Error storing chunk ${chunkIndex} for document ${documentId}:`, chunkError);
             // Continue with other chunks even if one fails
           }
         }

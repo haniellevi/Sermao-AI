@@ -1418,11 +1418,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (fileExt === '.txt' || fileExt === '.md') {
               fileContent = file.buffer.toString('utf-8');
             } else if (fileExt === '.pdf') {
-              // For now, treat PDF as text (you can add PDF parsing library later)
-              fileContent = file.buffer.toString('utf-8');
+              // Para PDFs, tentar extrair texto limpo removendo caracteres de controle
+              const rawText = file.buffer.toString('latin1'); // Use latin1 para preservar bytes
+              // Remove caracteres nulos e de controle que causam problemas no PostgreSQL
+              fileContent = rawText
+                .replace(/\x00/g, '') // Remove null bytes
+                .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ') // Remove outros caracteres de controle
+                .replace(/\s+/g, ' ') // Normaliza espaços
+                .trim();
+              
+              // Verificar se conseguimos extrair texto útil
+              if (fileContent.length < 100 || fileContent.split(' ').length < 10) {
+                results.push({
+                  success: false,
+                  fileName: file.originalname,
+                  message: 'PDF não contém texto extraível ou está corrompido. Use um arquivo de texto.'
+                });
+                continue;
+              }
             } else if (fileExt === '.docx') {
-              // For now, treat DOCX as text (you can add DOCX parsing library later)
-              fileContent = file.buffer.toString('utf-8');
+              // Para DOCX, usar latin1 e limpar
+              const rawText = file.buffer.toString('latin1');
+              fileContent = rawText
+                .replace(/\x00/g, '')
+                .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
             } else {
               fileContent = file.buffer.toString('utf-8');
             }
@@ -1431,7 +1452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             results.push({
               success: false,
               fileName: file.originalname,
-              message: 'Erro de codificação do arquivo. Verifique se é um arquivo de texto válido.'
+              message: 'Erro de codificação. Para PDFs, converta para TXT primeiro.'
             });
             continue;
           }
@@ -1450,11 +1471,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`[BulkIndex] Storing document: ${documentId} (${fileContent.trim().length} characters)`);
           
-          // Add timeout wrapper for document storage
+          // Add timeout wrapper for document storage - aumentado para 3 minutos
           const storeWithTimeout = new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
-              reject(new Error('Timeout: Processamento demorou mais que 60 segundos'));
-            }, 60000); // 60 second timeout
+              reject(new Error('Timeout: Processamento demorou mais que 3 minutos. Arquivo muito grande ou complexo.'));
+            }, 180000); // 3 minute timeout para arquivos grandes
 
             ragService.storeDocument(
               adminUserId, 

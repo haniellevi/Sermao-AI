@@ -15,7 +15,7 @@ import Footer from "@/components/Footer";
 const getTokenForRequest = (): string | null => {
   // Tentar diferentes chaves de localStorage
   const possibleKeys = ['token', 'auth_token', 'authToken'];
-  
+
   for (const key of possibleKeys) {
     const token = localStorage.getItem(key);
     if (token) {
@@ -23,7 +23,7 @@ const getTokenForRequest = (): string | null => {
       return token;
     }
   }
-  
+
   console.log(`[TokenDebug] No token found in any localStorage key`);
   return null;
 };
@@ -43,6 +43,10 @@ export default function AdminBulkIndexPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
+
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [estimatedTimeLeft, setEstimatedTimeLeft] = useState(0);
+  const [currentFile, setCurrentFile] = useState('');
 
   if (isLoading) {
     return (
@@ -109,107 +113,87 @@ export default function AdminBulkIndexPage() {
     if (!selectedFiles || selectedFiles.length === 0) {
       toast({
         title: "Erro",
-        description: "Selecione pelo menos um arquivo para upload",
+        description: "Selecione pelo menos um arquivo",
         variant: "destructive",
       });
       return;
     }
 
-    console.log(`[AdminBulkIndex] Iniciando upload de ${selectedFiles.length} arquivos`);
-    console.log(`[AdminBulkIndex] Usuário logado:`, user);
-
     setUploading(true);
     setProgress(0);
     setResults([]);
+    setTimeElapsed(0);
+    setEstimatedTimeLeft(0);
+    setCurrentFile('');
 
-    // Simular progresso durante upload
-    const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + Math.random() * 15, 90));
-    }, 500);
+    const startTime = Date.now();
+    const totalFiles = selectedFiles.length;
+
+    // Timer para mostrar tempo decorrido
+    const timeInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      setTimeElapsed(elapsed);
+
+      // Estimar tempo restante baseado no progresso
+      if (progress > 10) {
+        const rate = progress / elapsed;
+        const remaining = Math.floor((100 - progress) / rate);
+        setEstimatedTimeLeft(remaining);
+      }
+    }, 1000);
 
     try {
-      // Obter token de autenticação usando função de debug
-      const token = getTokenForRequest();
-      console.log(`[AdminBulkIndex] Token obtido:`, token ? `${token.substring(0, 20)}...` : 'null');
-      console.log(`[AdminBulkIndex] LocalStorage keys:`, Object.keys(localStorage));
-
-      if (!token) {
-        console.log(`[AdminBulkIndex] Token not found - redirecting to login`);
-        toast({
-          title: "Erro de Autenticação",
-          description: "Sessão expirada. Redirecionando para login...",
-          variant: "destructive",
-        });
-        setTimeout(() => setLocation('/login'), 2000);
-        return;
-      }
-
-      // Validar formato do token JWT
-      if (!token.includes('.') || token.split('.').length !== 3) {
-        console.log(`[AdminBulkIndex] Token format seems invalid`);
-        toast({
-          title: "Erro de Autenticação",
-          description: "Token inválido. Redirecionando para login...",
-          variant: "destructive",
-        });
-        setTimeout(() => setLocation('/login'), 2000);
-        return;
-      }
-
       const formData = new FormData();
       Array.from(selectedFiles).forEach((file, index) => {
-        console.log(`[AdminBulkIndex] Adicionando arquivo ${index + 1}: ${file.name} (${file.size} bytes)`);
         formData.append('documents', file);
+        if (index === 0) setCurrentFile(file.name);
       });
 
-      console.log(`[AdminBulkIndex] Enviando requisição para /api/admin/rag/bulk-index`);
+      // Progresso mais realista baseado no número de arquivos
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 85) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + (80 / totalFiles) * Math.random();
+        });
+      }, 2000);
 
-      // Usar a função apiUpload que já está configurada corretamente
-      const response = await fetch('/api/admin/rag/bulk-index', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Não definir Content-Type para FormData - o browser define automaticamente
-        },
-        credentials: 'include',
-        body: formData
-      });
+      const response = await apiUpload("/api/admin/rag/bulk-index", formData);
 
       clearInterval(progressInterval);
-
-      console.log(`[AdminBulkIndex] Resposta recebida: Status ${response.status}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error(`[AdminBulkIndex] Erro na resposta:`, errorData);
-        throw new Error(errorData.message || `Erro HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(`[AdminBulkIndex] Dados recebidos:`, data);
-      
-      setResults(data.results || []);
+      clearInterval(timeInterval);
       setProgress(100);
+      setCurrentFile('Concluído');
+      setResults(response.results || []);
 
-      const successCount = data.results?.filter((r: UploadResult) => r.success).length || 0;
-      console.log(`[AdminBulkIndex] Upload concluído: ${successCount} arquivos processados com sucesso`);
+      const successCount = response.successful || 0;
+      const totalCount = response.processed || 0;
 
       toast({
-        title: "Upload Concluído",
-        description: `${successCount} arquivos processados com sucesso`,
+        title: "Processamento Concluído",
+        description: `${successCount}/${totalCount} arquivos indexados com sucesso`,
+        variant: successCount === totalCount ? "default" : "destructive",
       });
+
+      setSelectedFiles(null);
+      const fileInput = document.getElementById('document-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
 
     } catch (error: any) {
-      console.error(`[AdminBulkIndex] Erro durante upload:`, error);
-      clearInterval(progressInterval);
-      
+      clearInterval(timeInterval);
       toast({
-        title: "Erro",
-        description: error.message || 'Erro durante o upload',
+        title: "Erro no Upload",
+        description: error.message || "Falha no processamento",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
+      setProgress(0);
+      setTimeElapsed(0);
+      setEstimatedTimeLeft(0);
+      setCurrentFile('');
     }
   };
 
@@ -299,10 +283,18 @@ export default function AdminBulkIndexPage() {
               {uploading && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Processando documentos para indexação...</span>
-                    <span>{progress}%</span>
+                    <span>{currentFile ? `Processando: ${currentFile}` : 'Processando documentos para indexação...'}</span>
+                    <span>{progress.toFixed(1)}%</span>
                   </div>
                   <Progress value={progress} />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Tempo decorrido: {timeElapsed}s</span>
+                    <span>
+                      {estimatedTimeLeft > 0
+                        ? `Tempo restante estimado: ${estimatedTimeLeft}s`
+                        : 'Calculando tempo restante...'}
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-foreground text-center">
                     Por favor, aguarde enquanto os documentos são processados e indexados na base RAG
                   </p>
