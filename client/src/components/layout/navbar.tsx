@@ -1,5 +1,4 @@
-
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/lib/auth";
 import { 
@@ -20,7 +19,7 @@ import {
 
 export function Navbar() {
   const { user, logout } = useAuthContext();
-  const [location, setLocation] = useLocation();
+  const [location, navigate] = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -39,7 +38,7 @@ export function Navbar() {
             <Link to="/dashboard" className="text-xl font-bold text-gray-900">
               Gerador de Sermões
             </Link>
-            
+
             <div className="hidden md:flex space-x-4">
               <Link
                 to="/dashboard"
