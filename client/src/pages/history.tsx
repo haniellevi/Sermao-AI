@@ -206,50 +206,42 @@ export default function HistoryPage() {
                 <Card key={sermon.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {String(sermon.title || 'Sem título')}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            ID: {sermon.id}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center text-sm text-gray-500 mb-3">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          {formatDate(sermon.createdAt)}
-                        </div>
+                      <Link href={`/sermon-result/${sermon.id}`} className="flex-1 cursor-pointer">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors">
+                              {String(sermon.title || 'Sem título')}
+                            </h3>
+                          </div>
+                          
+                          <div className="flex items-center text-sm text-gray-500 mb-3">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {formatDate(sermon.createdAt)}
+                          </div>
 
-                        <div className="text-sm text-gray-600 line-clamp-2">
-                          {(() => {
-                            try {
-                              const content = JSON.parse(sermon.content);
-                              if (typeof content.sermao === 'string') {
-                                return content.sermao.substring(0, 200) + '...';
-                              } else {
-                                return 'Conteúdo do sermão disponível';
+                          <div className="text-sm text-gray-600 line-clamp-2">
+                            {(() => {
+                              try {
+                                const content = JSON.parse(sermon.content);
+                                if (typeof content.sermao === 'string') {
+                                  return content.sermao.substring(0, 200) + '...';
+                                } else {
+                                  return 'Conteúdo do sermão disponível';
+                                }
+                              } catch {
+                                const contentStr = typeof sermon.content === 'string' 
+                                  ? sermon.content 
+                                  : 'Conteúdo não disponível';
+                                return contentStr.length > 200 
+                                  ? contentStr.substring(0, 200) + '...' 
+                                  : contentStr;
                               }
-                            } catch {
-                              const contentStr = typeof sermon.content === 'string' 
-                                ? sermon.content 
-                                : 'Conteúdo não disponível';
-                              return contentStr.length > 200 
-                                ? contentStr.substring(0, 200) + '...' 
-                                : contentStr;
-                            }
-                          })()}
+                            })()}
+                          </div>
                         </div>
-                      </div>
+                      </Link>
 
                       <div className="flex items-center gap-2 ml-4">
-                        <Link href={`/sermon-result/${sermon.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver
-                          </Button>
-                        </Link>
-                        
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">

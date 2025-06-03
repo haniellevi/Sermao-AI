@@ -117,25 +117,43 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Atividade Recente</h3>
             <div className="space-y-3">
-              {Array.isArray(sermonsData) && sermonsData.slice(0, 3).map((sermon: any) => (
-                <div key={sermon.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <div className="bg-primary/10 rounded-full p-2 mr-3">
-                    <FileText className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Sermão "{sermon.title}" gerado
-                    </p>
-                    <p className="text-xs text-gray-500 flex items-center">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {new Date(sermon.createdAt).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                    {sermon.qualityScore}/10
-                  </div>
-                </div>
-              )) || (
+              {Array.isArray(sermonsData) && sermonsData.slice(0, 3).map((sermon: any) => {
+                let qualityScore = 'N/A';
+                try {
+                  const content = JSON.parse(sermon.content);
+                  if (content.avaliacao_qualidade && typeof content.avaliacao_qualidade === 'object') {
+                    qualityScore = content.avaliacao_qualidade.nota || 'N/A';
+                  } else if (content.avaliacao_qualidade && typeof content.avaliacao_qualidade === 'string') {
+                    // Try to extract score from string
+                    const scoreMatch = content.avaliacao_qualidade.match(/(\d+(?:\.\d+)?)/);
+                    qualityScore = scoreMatch ? scoreMatch[1] : 'N/A';
+                  }
+                } catch {
+                  qualityScore = 'N/A';
+                }
+                
+                return (
+                  <Link key={sermon.id} href={`/sermon-result/${sermon.id}`}>
+                    <div className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                      <div className="bg-primary/10 rounded-full p-2 mr-3">
+                        <FileText className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          Sermão "{sermon.title}" gerado
+                        </p>
+                        <p className="text-xs text-gray-500 flex items-center">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {new Date(sermon.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                        {qualityScore !== 'N/A' ? `${qualityScore}/10` : 'N/A'}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              }) || (
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                   <p>Nenhum sermão gerado ainda</p>
