@@ -161,7 +161,11 @@ const processDNA = async (
   personalDescription: string
 ): Promise<Record<string, any>> => {
   try {
-    // Create analysis prompt
+    // Read system prompt from file
+    const systemPromptPath = path.join(process.cwd(), 'backend', 'prompts', 'AGENTE_CRIADOR_DNA.txt');
+    const systemPromptContent = fs.readFileSync(systemPromptPath, 'utf8');
+
+    // Create analysis content
     let contentForAnalysis = '';
 
     // Add personal description
@@ -190,60 +194,50 @@ const processDNA = async (
     // If no content provided, create default profile
     if (!contentForAnalysis.trim()) {
       return {
-        teologia: "Teologia bíblica equilibrada com ênfase na aplicação prática",
-        estilo: "Pregação expositiva com ilustrações contemporâneas",
-        audiencia: "Congregação geral com diversidade de idades e experiências",
-        linguagem: "Linguagem acessível e envolvente",
-        estrutura: "Estrutura clara com introdução, desenvolvimento e conclusão"
+        linguagemVerbal: {
+          formalidade: "Equilibrada, transita entre termos formais e coloquiais",
+          vocabulario: "Simples e direto, visando clareza máxima para qualquer ouvinte",
+          palavrasChaveFrasesEfeito: "Não identificável",
+          clarezaPrecisao: "Linguagem cristalina, conceitos complexos explicados com analogias simples",
+          sintaxeFrasal: "Frases curtas, diretas e impactantes, estilo telegráfico",
+          ritmoDaFala: "Pausado e reflexivo, com ênfase nas palavras-chave"
+        },
+        tomEComunicacao: {
+          tomGeral: "Inspirador e encorajador, com um calor pastoral evidente",
+          nivelPaixaoIntensidade: "Calmo e ponderado, transmitindo autoridade serena",
+          usoPerguntasRetoricas: "Usa perguntas pontuais para transição, sem esperar resposta",
+          chamadasAcao: "Mais focado na reflexão e na transformação gradual do que na ação imediata"
+        },
+        estruturaESiloHomiletico: {
+          estiloPrincipal: "Expositivo predominante, desdobrando o texto quase verso a verso",
+          introducao: "Começa diretamente com a leitura e explanação do texto bíblico",
+          desenvolvimentoCorpo: "Claro desenvolvimento em 3 a 5 pontos principais, numerados e facilmente memorizáveis",
+          transicoes: "Transições suaves e lógicas entre os pontos, usando frases-ponte bem construídas",
+          conclusao: "Recapitula pontos principais e faz um apelo final forte, convidando à decisão ou mudança",
+          usoIlustracoesAnalogias: "Foca mais na explicação do texto do que em ilustrações longas"
+        },
+        linhaTeologicaEInterpretativa: {
+          enfasesDoutrinarias: "Foca na graça e no perdão como fundamentos da salvação e vida cristã",
+          abordagemHermeneutica: "Prioriza a interpretação histórico-gramatical do texto, buscando o sentido original",
+          fontesAutoridade: "Foco exclusivo na Bíblia como única regra de fé e prática",
+          visaoGeral: "Teologia equilibrada com ênfase na aplicação prática"
+        },
+        recursosRetoricosEDidaticos: {
+          figurasLinguagem: "Uso moderado de metáforas, símiles e parábolas",
+          usoHumor: "Sério e direto, com pouco ou nenhum uso de humor",
+          interacaoAudiencia: "Pouca interação direta, estilo mais expositivo unidirecional",
+          didaticaEspecifica: "Faz resumos periódicos para reforçar aprendizagem",
+          linguagemInclusiva: "Linguagem mais tradicional, focada em pronomes distintos"
+        }
       };
     }
 
-    const dnaPrompt = `
-Você é um **Agente Especialista em Análise de Estilo Homilético e Teológico**, com a função crítica de criar um perfil abrangente e altamente descritivo do "DNA do Pregador" a partir de textos e transcrições de pregações. Seu objetivo é identificar as características mais sutis e únicas da comunicação do pregador, destilando um perfil tão preciso que outro agente de IA possa replicar seu estilo com fidelidade. Seja o mais específico e descritivo possível.
-
+    // Create user message content with DNA analysis request
+    const userMessageContent = `
 CONTEÚDO PARA ANÁLISE:
 ${contentForAnalysis}
 
-Sua tarefa é extrair e detalhar os seguintes atributos, apresentando-os em um formato JSON estritamente definido. A profundidade da sua análise é fundamental.
-
-### ATRIBUTOS A ANALISAR E DETALHAR:
-
-#### 1. LINGUAGEM VERBAL
-- **Formalidade:** (Ex: "Altamente formal e acadêmica, com uso de português culto", "Conversacional e informal, como uma conversa de amigo")
-- **Vocabulário:** (Ex: "Extenso e erudito, com predileção por vocábulos menos comuns", "Simples e direto, visando clareza máxima")
-- **Palavras-chave/Frases-efeito:** (Ex: "Repete frequentemente 'Graça de Deus é tudo'", "Utiliza metáforas militares com frequência")
-- **Clareza/Precisão:** (Ex: "Linguagem cristalina, conceitos complexos explicados com analogias simples")
-- **Sintaxe Frasal:** (Ex: "Frases longas e complexas, com múltiplas subordinações", "Frases curtas, diretas e impactantes")
-- **Ritmo da Fala:** (Ex: "Pausado e reflexivo, com ênfase nas palavras-chave", "Acelerado e enérgico, transmitindo urgência")
-
-#### 2. TOM E COMUNICAÇÃO
-- **Tom Geral:** (Ex: "Inspirador e encorajador, com um calor pastoral evidente", "Confrontador e desafiador, sem ser agressivo")
-- **Nível de Paixão/Intensidade:** (Ex: "Transborda paixão e fervor, com elevações de voz", "Calmo e ponderado, transmitindo autoridade serena")
-- **Uso de Perguntas Retóricas:** (Ex: "Frequentemente utiliza perguntas perspicazes para engajar", "Pouco uso, preferindo afirmações diretas")
-- **Chamadas à Ação:** (Ex: "Chamadas à ação diretas, frequentes e urgentes", "Mais focado na reflexão e transformação gradual")
-
-#### 3. ESTRUTURA E ESTILO HOMILÉTICO
-- **Estilo Principal:** (Ex: "Expositivo predominante, desdobrando o texto quase verso a verso", "Temático, mas com forte exegese")
-- **Introdução:** (Ex: "Começa com uma história pessoal ou ilustração cativante", "Inicia com uma pergunta impactante")
-- **Desenvolvimento/Corpo:** (Ex: "Claro desenvolvimento em 3 a 5 pontos principais, numerados", "Desenvolvimento fluído, sem pontos numerados óbvios")
-- **Transições:** (Ex: "Transições suaves e lógicas entre os pontos", "Transições abruptas e rápidas para manter energia")
-- **Conclusão:** (Ex: "Recapitula pontos principais e faz um apelo final forte", "Termina com uma oração ou benção profunda")
-- **Uso de Ilustrações/Analogias:** (Ex: "Abundante em histórias e analogias da vida real", "Foca mais na explicação do texto")
-
-#### 4. LINHA TEOLÓGICA E INTERPRETATIVA
-- **Ênfases Doutrinárias:** (Ex: "Forte ênfase na soberania de Deus e eleição", "Foca na graça e no perdão como fundamentos")
-- **Abordagem Hermenêutica:** (Ex: "Prioriza a interpretação histórico-gramatical do texto", "Usa interpretações alegóricas ou tipológicas")
-- **Fontes de Autoridade:** (Ex: "Foco exclusivo na Bíblia como única regra de fé", "Referências frequentes a teólogos históricos")
-- **Visão Geral:** (Ex: "Teologia Reformada/Calvinista, com ênfase na glória de Deus", "Arminiana, focando na liberdade humana")
-
-#### 5. RECURSOS RETÓRICOS E DIDÁTICOS
-- **Figuras de Linguagem:** (Ex: "Uso frequente e elaborado de metáforas, símiles e parábolas", "Anáforas e repetições de frases para criar ritmo")
-- **Uso de Humor:** (Ex: "Utiliza humor inteligente e relevante, que serve à mensagem", "Sério e direto, com pouco ou nenhum uso de humor")
-- **Interação com Audiência:** (Ex: "Faz perguntas diretas à audiência, incentivando reflexão", "Pouca interação direta, estilo mais expositivo unidirecional")
-- **Didática Específica:** (Ex: "Usa acrônimos ou mnemônicos para facilitar memorização", "Faz resumos periódicos para reforçar aprendizagem")
-- **Linguagem Inclusiva:** (Ex: "Usa linguagem neutra de gênero quando apropriado", "Linguagem mais tradicional, focada em pronomes distintos")
-
-FORMATO DE SAÍDA (JSON - Estritamente neste formato):
+Formato de Saída (JSON - Estritamente neste formato):
 Seu retorno DEVE ser um objeto JSON, estritamente no formato abaixo. Seja o mais detalhado e descritivo possível em cada campo. Se uma característica não for identificável, use "Não identificável" ou "Pouco evidente", mas esforce-se para inferir.
 
 {
@@ -264,7 +258,7 @@ Seu retorno DEVE ser um objeto JSON, estritamente no formato abaixo. Seja o mais
   "estruturaESiloHomiletico": {
     "estiloPrincipal": "string",
     "introducao": "string",
-    "desenvolvimentoCorpo": "string", 
+    "desenvolvimentoCorpo": "string",
     "transicoes": "string",
     "conclusao": "string",
     "usoIlustracoesAnalogias": "string"
@@ -272,22 +266,27 @@ Seu retorno DEVE ser um objeto JSON, estritamente no formato abaixo. Seja o mais
   "linhaTeologicaEInterpretativa": {
     "enfasesDoutrinarias": "string",
     "abordagemHermeneutica": "string",
-    "fontesAutoridade": "string", 
+    "fontesAutoridade": "string",
     "visaoGeral": "string"
   },
   "recursosRetoricosEDidaticos": {
     "figurasLinguagem": "string",
     "usoHumor": "string",
     "interacaoAudiencia": "string",
-    "didaticaEspecifica": "string", 
+    "didaticaEspecifica": "string",
     "linguagemInclusiva": "string"
   }
 }
 
-Retorne APENAS o JSON, sem texto adicional antes ou depois.
-`;
+Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 
-    const dnaResponse = await callGemini(dnaPrompt, false);
+    // Create messages for Gemini
+    const messagesForGemini = [
+      { "role": "system", "parts": [{ "text": systemPromptContent }] },
+      { "role": "user", "parts": [{ "text": userMessageContent }] }
+    ];
+
+    const response = await callGeminiChatModel(messagesForGemini);
 
     try {
       // Clean the response to remove markdown formatting
