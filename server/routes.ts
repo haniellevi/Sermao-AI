@@ -40,21 +40,39 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('Authentication attempt:', {
+    hasAuthHeader: !!authHeader,
+    hasToken: !!token,
+    tokenLength: token ? token.length : 0,
+    method: req.method,
+    url: req.url
+  });
+
   if (!token) {
+    console.log('No token provided');
     return res.status(401).json({ message: 'Token de acesso necessário' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    console.log('Token decoded successfully:', { userId: decoded.userId });
+    
     const user = await storage.getUser(decoded.userId);
     
     if (!user) {
+      console.log('User not found for ID:', decoded.userId);
       return res.status(401).json({ message: 'Token inválido' });
     }
 
+    console.log('Authentication successful for user:', user.email);
     req.user = user;
     next();
-  } catch (error) {
+  } catch (error: any) {
+    console.log('Token validation error:', {
+      name: error.name,
+      message: error.message,
+      tokenPreview: token.substring(0, 20) + '...'
+    });
     return res.status(403).json({ message: 'Token inválido ou expirado' });
   }
 };
