@@ -16,8 +16,8 @@ import {
   type User
 } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ragService } from "./ragService";
 import { ChromaClient } from 'chromadb';
-import path from "path";
 
 // Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'sermon-generator-secret';
@@ -388,15 +388,14 @@ const retrieve_relevant_chunks = async (query_text: string, num_results: number 
 // Sermon generation function  
 const generateSermonWithAI = async (request: any): Promise<any> => {
   try {
-    const { theme, purpose, audience, duration, style, context, referenceUrls, dnaType, activeDnaProfile } = request;
+    const { theme, purpose, audience, duration, style, context, referenceUrls, dnaType, activeDnaProfile, userId } = request;
 
     // Read system prompt from file
     const systemPromptPath = path.join(process.cwd(), 'backend', 'prompts', 'AGENTE_GERADOR_SERMAO.txt');
     const systemPromptContent = fs.readFileSync(systemPromptPath, 'utf8');
 
-    // Retrieve relevant context using RAG
-    const queryForRAG = `${theme} ${purpose !== 'nenhum' ? purpose : ''} ${style !== 'nenhum' ? style : ''}`.trim();
-    const retrievedContext = await retrieve_relevant_chunks(queryForRAG, 3);
+    // Get enhanced context from RAG service
+    const ragContext = await ragService.getEnhancedContext(userId, theme, `${purpose} ${audience} ${context}`.trim());
 
     const dnaContext = activeDnaProfile && dnaType === 'customizado' ? `
 PERFIL DNA DO PREGADOR (Análise Detalhada):
@@ -440,16 +439,11 @@ ADERÊNCIA RIGOROSA: O sermão deve incorporar TODAS as características identif
 ` : 'PERFIL DNA: Padrão equilibrado e versátil - pastor batista bem embasado, focado no ensino bíblico com aplicação prática';
 
     // Create user message content with detailed instructions and RAG context
-    const ragContextSection = retrievedContext.length > 0 
+    const ragContextSection = ragContext 
       ? `
---- CONTEXTO ADICIONAL DE COMENTÁRIOS BÍBLICOS RECUPERADO ---
+--- CONTEXTO ADICIONAL DE DOCUMENTOS TEOLÓGICOS RECUPERADO ---
 
-Os seguintes trechos de comentários bíblicos foram recuperados para enriquecer o sermão:
-
-${retrievedContext.map((chunk, index) => `
-FONTE ${index + 1}:
-${chunk}
-`).join('\n')}
+${ragContext}
 
 Use este contexto para aprofundar a exegese, trazer insights teológicos adicionais e enriquecer a aplicação prática do sermão.
 
