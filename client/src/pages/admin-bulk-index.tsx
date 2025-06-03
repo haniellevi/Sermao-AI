@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { useAuthContext } from "@/lib/auth";
+import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -25,26 +25,36 @@ export default function AdminBulkIndexPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { user } = useAuthContext();
+  const { user, isLoading } = useAuth();
 
-  // Verificar autenticação no carregamento
-  React.useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast({
-        title: "Erro de Autenticação",
-        description: "Token não encontrado. Faça login novamente.",
-        variant: "destructive",
-      });
-      setLocation('/login');
-    }
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6 text-center">
+        <p>Carregando...</p>
+      </div>
+    );
+  }
 
-  if (!user || user.role !== 'admin') {
+  if (!user) {
+    return (
+      <div className="container mx-auto p-6 text-center">
+        <h1 className="text-2xl font-bold mb-2">Acesso Negado</h1>
+        <p className="text-muted-foreground">Você precisa estar logado para acessar esta área.</p>
+        <Button onClick={() => setLocation('/login')} className="mt-4">
+          Fazer Login
+        </Button>
+      </div>
+    );
+  }
+
+  if (user.role !== 'admin') {
     return (
       <div className="container mx-auto p-6 text-center">
         <h1 className="text-2xl font-bold mb-2">Acesso Restrito</h1>
         <p className="text-muted-foreground">Apenas administradores podem acessar esta área.</p>
+        <Button onClick={() => setLocation('/')} className="mt-4">
+          Voltar ao Início
+        </Button>
       </div>
     );
   }
