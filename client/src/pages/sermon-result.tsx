@@ -118,8 +118,8 @@ export default function SermonResultPage() {
     mutationFn: async (sermonId: string) => {
       const response = await fetch(`/api/sermons/${sermonId}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
       });
