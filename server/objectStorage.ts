@@ -2,7 +2,7 @@
 import { Client } from '@replit/object-storage';
 
 export class ObjectStorageService {
-  private client: Client;
+  public client: Client;
 
   constructor() {
     this.client = new Client();
@@ -73,6 +73,30 @@ export class ObjectStorageService {
     }
     
     return keys;
+  }
+
+  // Backup de documento RAG
+  async backupRagDocument(userId: number, documentId: string, content: string, originalName: string): Promise<string> {
+    const key = `rag-backup/${userId}/${Date.now()}-${documentId}-${originalName}`;
+    await this.client.uploadFromText(key, content);
+    return key;
+  }
+
+  // Recuperar backup de documento RAG
+  async getRagDocumentBackup(key: string): Promise<string> {
+    return await this.client.downloadAsText(key);
+  }
+
+  // Listar backups RAG de um usuário
+  async listUserRagBackups(userId: number): Promise<string[]> {
+    return await this.client.list(`rag-backup/${userId}/`);
+  }
+
+  // Salvar metadados de indexação
+  async saveIndexingMetadata(userId: number, metadata: any): Promise<string> {
+    const key = `rag-metadata/${userId}/indexing-${Date.now()}.json`;
+    await this.client.uploadFromText(key, JSON.stringify(metadata, null, 2));
+    return key;
   }
 }
 

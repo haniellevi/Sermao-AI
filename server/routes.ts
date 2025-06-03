@@ -17,6 +17,7 @@ import {
 } from "../shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ragService } from "./ragService";
+import { objectStorage } from "./objectStorage";
 import { db } from "./db";
 import { users, sermons, dnaProfiles, ragChunks } from "../shared/schema";
 import { sql, eq } from "drizzle-orm";
@@ -810,6 +811,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const youtubeLinks = req.body.youtubeLinks ? JSON.parse(req.body.youtubeLinks) : [];
       const personalDescription = req.body.personalDescription || '';
 
+      // Save files to Object Storage for persistence
+      const savedFileKeys: string[] = [];
+      if (files.length > 0) {
+        try {
+          const fileData = files.map(f => ({ name: f.originalname, buffer: f.buffer }));
+          const keys = await objectStorage.uploadMultipleFiles(userId, fileData, 'dna');
+          savedFileKeys.push(...keys);
+          console.log(`DNA files saved to Object Storage: ${keys.length} files`);
+        } catch (storageError) {
+          console.error('Error saving to Object Storage:', storageError);
+          // Continue without failing - files are still in memory for processing
+        }
+      }
+
       // Process DNA with AI
       const customAttributes = await processDNA(userId, files, pastedTexts, youtubeLinks, personalDescription);
 
@@ -823,8 +838,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dnaProfile = await storage.updateDnaProfile(existingCustomProfile.id, {
           customAttributes,
           uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
-          content: JSON.stringify({ pastedTexts, youtubeLinks, personalDescription }),
+          content: JSON.stringify({ pastedTexts, youtubeLinks, personalDescription, savedFileKeys }),
         });
+        
+        // Save updated DNA profile to Object Storage
+        try {
+          await objectStorage.saveDnaProfile(userId, existingCustomProfile.id, {
+            customAttributes,
+            pastedTexts,
+            youtubeLinks,
+            personalDescription,
+            uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
+            savedFileKeys,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (storageError) {
+          console.error('Error saving DNA profile to Object Storage:', storageError);
+        }
       } else {
         // Create new profile
         dnaProfile = await storage.createDnaProfile({
@@ -832,8 +862,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: "customizado",
           customAttributes,
           uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
-          content: JSON.stringify({ pastedTexts, youtubeLinks, personalDescription }),
+          content: JSON.stringify({ pastedTexts, youtubeLinks, personalDescription, savedFileKeys }),
         });
+
+        // Save new DNA profile to Object Storage
+        try {
+          await objectStorage.saveDnaProfile(userId, dnaProfile!.id, {
+            customAttributes,
+            pastedTexts,
+            youtubeLinks,
+            personalDescription,
+            uploadedFiles: files.map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })),
+            savedFileKeys,
+            createdAt: new Date().toISOString()
+          });
+        } catch (storageError) {
+          console.error('Error saving DNA profile to Object Storage:', storageError);
+        }
       }
 
       // Set active DNA profile
@@ -929,6 +974,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: JSON.stringify(sermonContent),
         dnaProfileId: activeDnaProfile?.id || null,
       });
+
+      // Save sermon to Object Storage for backup and rich content
+      try {
+        const sermonTextKey = await objectStorage.saveSermonText(userId, sermon.id, sermonContent.sermao);
+        console.log(`Sermon saved to Object Storage: ${sermonTextKey}`);
+        
+        // Optionally save the full sermon object as JSON
+        const fullSermonKey = `sermons/${userId}/${sermon.id}/full-sermon.json`;
+        await objectStorage.client.uploadFromText(fullSermonKey, JSON.stringify({
+          ...sermon,
+          sermonContent,
+          generatedAt: new Date().toISOString(),
+          theme: validatedData.theme,
+          purpose: validatedData.purpose,
+          audience: validatedData.audience,
+          duration: validatedData.duration
+        }, null, 2));
+      } catch (storageError) {
+        console.error('Error saving sermon to Object Storage:', storageError);
+        // Continue without failing - sermon is already saved in database
+      }
 
       res.json({
         message: 'Sermão gerado com sucesso',
@@ -1038,7 +1104,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const documentId = `doc_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           const text = file.buffer.toString('utf-8');
           
-          // Store document in RAG service
+          // Save document to Object Storage first (backup)
+          try {
+            const backupKey = `rag-backup/${userId}/${documentId}-${file.originalname}`;
+            await objectStorage.client.uploadFromText(backupKey, text);
+            console.log(`RAG document backed up to Object Storage: ${backupKey}`);
+          } catch (storageError) {
+            console.error('Object Storage backup failed:', storageError);
+            // Continue - backup failure shouldn't stop RAG indexing
+          }
+          
+          // Store document in RAG service (unchanged)
           await ragService.storeDocument(userId, documentId, text, file.originalname);
           documentsProcessed++;
         } catch (error: any) {
