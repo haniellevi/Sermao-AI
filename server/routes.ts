@@ -1017,7 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/rag/stats', authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
-      const stats = ragService.getUserDocumentStats(userId);
+      const stats = await ragService.getUserDocumentStats(userId);
       res.json(stats);
     } catch (error: any) {
       console.error('Erro ao buscar estatísticas RAG:', error);
@@ -1029,7 +1029,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/rag/documents', authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
-      ragService.clearUserDocuments(userId);
+      await ragService.clearUserDocuments(userId);
       res.json({ message: 'Documentos removidos com sucesso' });
     } catch (error: any) {
       console.error('Erro ao remover documentos RAG:', error);
