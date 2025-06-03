@@ -1303,10 +1303,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
+      const maxFileSize = 5 * 1024 * 1024; // 5MB limit per file
 
       for (const file of files) {
         console.log(`[BulkIndex] Processing file: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
         try {
+          // Check file size limit
+          if (file.size > maxFileSize) {
+            console.log(`[BulkIndex] File too large: ${file.size} bytes`);
+            results.push({
+              success: false,
+              fileName: file.originalname,
+              message: `Arquivo muito grande (${Math.round(file.size / 1024 / 1024)}MB). Limite: 5MB`
+            });
+            continue;
+          }
+
           // Validate file type
           const allowedTypes = ['.txt', '.pdf', '.docx', '.md'];
           const fileExt = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
@@ -1326,16 +1338,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Extract text content based on file type
           let fileContent: string;
           
-          if (fileExt === '.txt' || fileExt === '.md') {
-            fileContent = file.buffer.toString('utf-8');
-          } else if (fileExt === '.pdf') {
-            // For now, treat PDF as text (you can add PDF parsing library later)
-            fileContent = file.buffer.toString('utf-8');
-          } else if (fileExt === '.docx') {
-            // For now, treat DOCX as text (you can add DOCX parsing library later)
-            fileContent = file.buffer.toString('utf-8');
-          } else {
-            fileContent = file.buffer.toString('utf-8');
+          try {
+            if (fileExt === '.txt' || fileExt === '.md') {
+              fileContent = file.buffer.toString('utf-8');
+            } else if (fileExt === '.pdf') {
+              // For now, treat PDF as text (you can add PDF parsing library later)
+              fileContent = file.buffer.toString('utf-8');
+            } else if (fileExt === '.docx') {
+              // For now, treat DOCX as text (you can add DOCX parsing library later)
+              fileContent = file.buffer.toString('utf-8');
+            } else {
+              fileContent = file.buffer.toString('utf-8');
+            }
+          } catch (encodingError) {
+            console.error(`[BulkIndex] Encoding error for ${file.originalname}:`, encodingError);
+            results.push({
+              success: false,
+              fileName: file.originalname,
+              message: 'Erro de codificação do arquivo. Verifique se é um arquivo de texto válido.'
+            });
+            continue;
           }
 
           // Validate content
@@ -1351,12 +1373,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const documentId = `admin_bulk_${file.originalname.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
           
           console.log(`[BulkIndex] Storing document: ${documentId} (${fileContent.trim().length} characters)`);
-          await ragService.storeDocument(
-            adminUserId, 
-            documentId, 
-            fileContent.trim(), 
-            `bulk-upload:${file.originalname}`
-          );
+          
+          // Add timeout wrapper for document storage
+          const storeWithTimeout = new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Timeout: Processamento demorou mais que 60 segundos'));
+            }, 60000); // 60 second timeout
+
+            ragService.storeDocument(
+              adminUserId, 
+              documentId, 
+              fileContent.trim(), 
+              `bulk-upload:${file.originalname}`
+            ).then(resolve).catch(reject).finally(() => clearTimeout(timeout));
+          });
+
+          await storeWithTimeout;
 
           console.log(`[BulkIndex] Successfully indexed: ${file.originalname}`);
           results.push({
@@ -1370,10 +1402,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: fileError.message,
             stack: fileError.stack?.substring(0, 200)
           });
+          
+          let errorMessage = 'Erro durante indexação';
+          if (fileError.message.includes('heap out of memory')) {
+            errorMessage = 'Arquivo muito grande para processamento. Tente um arquivo menor.';
+          } else if (fileError.message.includes('Timeout')) {
+            errorMessage = 'Processamento demorou muito. Tente um arquivo menor.';
+          } else if (fileError.message) {
+            errorMessage = fileError.message;
+          }
+          
           results.push({
             success: false,
             fileName: file.originalname,
-            message: fileError.message || 'Erro durante indexação'
+            message: errorMessage
           });
         }
       }

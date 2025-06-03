@@ -23,14 +23,30 @@ class RagService {
     }
   }
 
-  private chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
+  private chunkText(text: string, chunkSize: number = 600, overlap: number = 50): string[] {
     const chunks: string[] = [];
     let start = 0;
 
-    while (start < text.length) {
+    // Limit total chunks to prevent memory issues
+    const maxChunks = 100;
+    let chunkCount = 0;
+
+    while (start < text.length && chunkCount < maxChunks) {
       const end = Math.min(start + chunkSize, text.length);
-      chunks.push(text.slice(start, end));
+      const chunk = text.slice(start, end).trim();
+      
+      // Only add non-empty chunks with meaningful content
+      if (chunk.length > 30) {
+        chunks.push(chunk);
+        chunkCount++;
+      }
+      
       start = end - overlap;
+      
+      // Ensure we don't get stuck in infinite loop
+      if (start >= end) {
+        break;
+      }
     }
 
     return chunks;
@@ -46,31 +62,57 @@ class RagService {
         throw new Error('Documento muito pequeno ou vazio para indexação');
       }
 
-      const chunks = this.chunkText(cleanText, 800, 100); // Smaller chunks for better retrieval
-      console.log(`Created ${chunks.length} chunks for document: ${documentId}`);
+      // Limit document size to prevent memory issues
+      const maxDocumentSize = 50000; // 50KB max per document
+      const processText = cleanText.length > maxDocumentSize 
+        ? cleanText.substring(0, maxDocumentSize) + '...[documento truncado]'
+        : cleanText;
+
+      const chunks = this.chunkText(processText, 600, 50); // Smaller chunks with less overlap
+      console.log(`Created ${chunks.length} chunks for document: ${documentId} (text size: ${processText.length} chars)`);
 
       // Remove existing chunks for this document to avoid duplicates
       await db.delete(ragChunks).where(eq(ragChunks.documentId, documentId));
 
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
+      // Process chunks in smaller batches to prevent memory overflow
+      const batchSize = 5;
+      for (let batchStart = 0; batchStart < chunks.length; batchStart += batchSize) {
+        const batchEnd = Math.min(batchStart + batchSize, chunks.length);
+        const batchChunks = chunks.slice(batchStart, batchEnd);
         
-        try {
-          const embedding = await this.generateEmbedding(chunk);
+        console.log(`Processing batch ${Math.floor(batchStart / batchSize) + 1}/${Math.ceil(chunks.length / batchSize)}`);
+        
+        for (let i = 0; i < batchChunks.length; i++) {
+          const chunkIndex = batchStart + i;
+          const chunk = batchChunks[i];
           
-          await db.insert(ragChunks).values({
-            documentId: `${documentId}_chunk_${i}`,
-            chunkText: chunk,
-            embeddingVector: JSON.stringify(embedding),
-            sourceUrl: sourceUrl || null,
-            pageNumber: i + 1,
-            userId: userId
-          });
-          
-          console.log(`Stored chunk ${i + 1}/${chunks.length} for document: ${documentId}`);
-        } catch (chunkError) {
-          console.error(`Error storing chunk ${i} for document ${documentId}:`, chunkError);
-          // Continue with other chunks even if one fails
+          try {
+            // Add delay between embeddings to prevent rate limiting and memory buildup
+            if (chunkIndex > 0 && chunkIndex % 3 === 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            const embedding = await this.generateEmbedding(chunk);
+            
+            await db.insert(ragChunks).values({
+              documentId: `${documentId}_chunk_${chunkIndex}`,
+              chunkText: chunk,
+              embeddingVector: JSON.stringify(embedding),
+              sourceUrl: sourceUrl || null,
+              pageNumber: chunkIndex + 1,
+              userId: userId
+            });
+            
+            console.log(`Stored chunk ${chunkIndex + 1}/${chunks.length} for document: ${documentId}`);
+          } catch (chunkError) {
+            console.error(`Error storing chunk ${chunkIndex} for document ${documentId}:`, chunkError);
+            // Continue with other chunks even if one fails
+          }
+        }
+        
+        // Force garbage collection hint between batches
+        if (global.gc) {
+          global.gc();
         }
       }
       
