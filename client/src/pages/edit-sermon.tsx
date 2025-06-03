@@ -21,10 +21,13 @@ export default function EditSermonPage() {
   const [content, setContent] = useState('');
   const [isModified, setIsModified] = useState(false);
 
-  const { data: sermonData, isLoading, error } = useQuery({
+  const { data: sermonResponse, isLoading, error } = useQuery({
     queryKey: ['/api/sermons', sermonId],
     enabled: !!sermonId,
   });
+
+  // Handle the case where API returns array instead of single object
+  const sermonData = Array.isArray(sermonResponse) ? sermonResponse[0] : sermonResponse;
 
   useEffect(() => {
     if (sermonData) {

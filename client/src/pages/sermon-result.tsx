@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { FileText, Copy, Star, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { exportToPDF, exportToDOCX } from '@/lib/exportUtils';
 
 export default function SermonResultPage() {
   const [location, navigate] = useLocation();
@@ -13,10 +14,13 @@ export default function SermonResultPage() {
   const params = useParams();
   const sermonId = params.id;
 
-  const { data: sermonData, isLoading, error } = useQuery({
+  const { data: sermonResponse, isLoading, error } = useQuery({
     queryKey: ['/api/sermons', sermonId],
     enabled: !!sermonId,
   });
+
+  // Handle the case where API returns array instead of single object
+  const sermonData = Array.isArray(sermonResponse) ? sermonResponse[0] : sermonResponse;
 
   const copyToClipboard = async () => {
     if (!sermonData) return;

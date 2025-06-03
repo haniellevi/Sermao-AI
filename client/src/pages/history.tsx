@@ -25,10 +25,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Link } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { exportToPDF, exportToDOCX } from '@/lib/exportUtils';
 
 export default function HistoryPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
 
   const { data: sermonsData, isLoading } = useQuery({
     queryKey: ['/api/sermons'],
@@ -41,87 +44,35 @@ export default function HistoryPage() {
       )
     : [];
 
-  const downloadPDF = async (sermon: any) => {
+  const handleExportPDF = async (sermon: any) => {
     try {
-      let sermonContent;
-      try {
-        sermonContent = JSON.parse(sermon.content);
-      } catch {
-        sermonContent = { sermao: sermon.content };
-      }
-
-      // Create a formatted content for PDF
-      const content = `
-${sermon.title}
-
-${typeof sermonContent.sermao === 'string' ? sermonContent.sermao : 'Conteúdo não disponível'}
-
-${sermonContent.sugestoes_enriquecimento ? 
-  '\n\nSugestões de Enriquecimento:\n' + 
-  (Array.isArray(sermonContent.sugestoes_enriquecimento) 
-    ? sermonContent.sugestoes_enriquecimento.join('\n') 
-    : sermonContent.sugestoes_enriquecimento)
-  : ''}
-
-${sermonContent.avaliacao_qualidade ? 
-  '\n\nAvaliação de Qualidade:\n' + sermonContent.avaliacao_qualidade 
-  : ''}
-      `.trim();
-
-      // Create a blob and download
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${sermon.title.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await exportToPDF(sermon);
+      toast({
+        title: "PDF gerado!",
+        description: "O sermão foi exportado em PDF com sucesso.",
+      });
     } catch (error) {
-      console.error('Erro ao baixar sermão:', error);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível exportar o sermão em PDF.",
+        variant: "destructive",
+      });
     }
   };
 
-  const downloadDOCX = async (sermon: any) => {
+  const handleExportDOCX = async (sermon: any) => {
     try {
-      let sermonContent;
-      try {
-        sermonContent = JSON.parse(sermon.content);
-      } catch {
-        sermonContent = { sermao: sermon.content };
-      }
-
-      // For now, we'll create a formatted text file
-      // In a real implementation, you'd use a library like docx
-      const content = `
-${sermon.title}
-
-${typeof sermonContent.sermao === 'string' ? sermonContent.sermao : 'Conteúdo não disponível'}
-
-${sermonContent.sugestoes_enriquecimento ? 
-  '\n\nSugestões de Enriquecimento:\n' + 
-  (Array.isArray(sermonContent.sugestoes_enriquecimento) 
-    ? sermonContent.sugestoes_enriquecimento.join('\n') 
-    : sermonContent.sugestoes_enriquecimento)
-  : ''}
-
-${sermonContent.avaliacao_qualidade ? 
-  '\n\nAvaliação de Qualidade:\n' + sermonContent.avaliacao_qualidade 
-  : ''}
-      `.trim();
-
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${sermon.title.replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await exportToDOCX(sermon);
+      toast({
+        title: "DOCX gerado!",
+        description: "O sermão foi exportado em DOCX com sucesso.",
+      });
     } catch (error) {
-      console.error('Erro ao baixar sermão:', error);
+      toast({
+        title: "Erro ao gerar DOCX",
+        description: "Não foi possível exportar o sermão em DOCX.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -307,11 +258,11 @@ ${sermonContent.avaliacao_qualidade ?
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => downloadPDF(sermon)}>
+                            <DropdownMenuItem onClick={() => handleExportPDF(sermon)}>
                               <Download className="w-4 h-4 mr-2" />
-                              Baixar como TXT
+                              Baixar como PDF
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => downloadDOCX(sermon)}>
+                            <DropdownMenuItem onClick={() => handleExportDOCX(sermon)}>
                               <Download className="w-4 h-4 mr-2" />
                               Baixar como DOCX
                             </DropdownMenuItem>
