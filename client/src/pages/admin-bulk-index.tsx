@@ -98,6 +98,9 @@ export default function AdminBulkIndexPage() {
       return;
     }
 
+    console.log(`[AdminBulkIndex] Iniciando upload de ${selectedFiles.length} arquivos`);
+    console.log(`[AdminBulkIndex] Usuário logado:`, user);
+
     setUploading(true);
     setProgress(0);
     setResults([]);
@@ -108,34 +111,59 @@ export default function AdminBulkIndexPage() {
     }, 500);
 
     try {
+      // Obter token de autenticação do localStorage
+      const token = localStorage.getItem('token');
+      console.log(`[AdminBulkIndex] Token obtido:`, token ? `${token.substring(0, 20)}...` : 'null');
+
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+      }
+
       const formData = new FormData();
-      Array.from(selectedFiles).forEach((file) => {
+      Array.from(selectedFiles).forEach((file, index) => {
+        console.log(`[AdminBulkIndex] Adicionando arquivo ${index + 1}: ${file.name} (${file.size} bytes)`);
         formData.append('documents', file);
       });
 
+      console.log(`[AdminBulkIndex] Enviando requisição para /api/admin/rag/bulk-index`);
+
       const response = await fetch('/api/admin/rag/bulk-index', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         credentials: 'include',
         body: formData
       });
 
       clearInterval(progressInterval);
 
+      console.log(`[AdminBulkIndex] Resposta recebida: Status ${response.status}`);
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro no upload');
+        console.error(`[AdminBulkIndex] Erro na resposta:`, errorData);
+        throw new Error(errorData.message || `Erro HTTP ${response.status}`);
       }
 
       const data = await response.json();
+      console.log(`[AdminBulkIndex] Dados recebidos:`, data);
+      
       setResults(data.results || []);
       setProgress(100);
 
+      const successCount = data.results?.filter((r: UploadResult) => r.success).length || 0;
+      console.log(`[AdminBulkIndex] Upload concluído: ${successCount} arquivos processados com sucesso`);
+
       toast({
         title: "Upload Concluído",
-        description: `${data.results?.filter((r: UploadResult) => r.success).length || 0} arquivos processados com sucesso`,
+        description: `${successCount} arquivos processados com sucesso`,
       });
 
     } catch (error: any) {
+      console.error(`[AdminBulkIndex] Erro durante upload:`, error);
+      clearInterval(progressInterval);
+      
       toast({
         title: "Erro",
         description: error.message || 'Erro durante o upload',

@@ -49,38 +49,45 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  console.log('Authentication attempt:', {
+  console.log('[Auth] Authentication attempt:', {
     hasAuthHeader: !!authHeader,
     hasToken: !!token,
     tokenLength: token ? token.length : 0,
     method: (req as any).method,
-    url: (req as any).url
+    url: (req as any).url,
+    userAgent: req.headers['user-agent']?.substring(0, 50),
+    timestamp: new Date().toISOString()
   });
 
   if (!token) {
-    console.log('No token provided');
+    console.log('[Auth] No token provided - returning 401');
     return res.status(401).json({ message: 'Token de acesso necessário' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
-    console.log('Token decoded successfully:', { userId: decoded.userId });
+    console.log('[Auth] Token decoded successfully:', { userId: decoded.userId });
 
     const user = await storage.getUser(decoded.userId);
 
     if (!user) {
-      console.log('User not found for ID:', decoded.userId);
+      console.log('[Auth] User not found for ID:', decoded.userId);
       return res.status(401).json({ message: 'Token inválido' });
     }
 
-    console.log('Authentication successful for user:', user.email);
+    console.log('[Auth] Authentication successful for user:', {
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive
+    });
     req.user = user;
     next();
   } catch (error: any) {
-    console.log('Token validation error:', {
+    console.log('[Auth] Token validation error:', {
       name: error.name,
       message: error.message,
-      tokenPreview: token.substring(0, 20) + '...'
+      tokenPreview: token.substring(0, 20) + '...',
+      timestamp: new Date().toISOString()
     });
     return res.status(403).json({ message: 'Token inválido ou expirado' });
   }
@@ -1264,26 +1271,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin RAG Management - Bulk index documents
   app.post('/api/admin/rag/bulk-index', authenticateToken, isAdmin, upload.array('documents', 20), async (req: AuthRequest, res: any) => {
     try {
-      console.log('Starting bulk index process...');
+      console.log('[BulkIndex] Starting bulk index process...');
+      console.log('[BulkIndex] Request headers:', {
+        authorization: req.headers.authorization ? `${req.headers.authorization.substring(0, 20)}...` : 'missing',
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length']
+      });
+      console.log('[BulkIndex] User info:', {
+        userId: req.user?.id,
+        userEmail: req.user?.email,
+        userRole: req.user?.role
+      });
+
       const files = req.files as Express.Multer.File[] || [];
       const adminUserId = req.user!.id;
       
-      console.log(`Received ${files.length} files for bulk indexing`);
+      console.log(`[BulkIndex] Received ${files.length} files for bulk indexing from user ${adminUserId}`);
       
       if (files.length === 0) {
+        console.log('[BulkIndex] No files received in request');
         return res.status(400).json({ message: 'Nenhum arquivo foi enviado' });
       }
 
       const results = [];
 
       for (const file of files) {
-        console.log(`Processing file: ${file.originalname}`);
+        console.log(`[BulkIndex] Processing file: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
         try {
           // Validate file type
           const allowedTypes = ['.txt', '.pdf', '.docx', '.md'];
           const fileExt = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
           
+          console.log(`[BulkIndex] File extension detected: ${fileExt}`);
+          
           if (!allowedTypes.includes(fileExt)) {
+            console.log(`[BulkIndex] File type not supported: ${fileExt}`);
             results.push({
               success: false,
               fileName: file.originalname,
@@ -1319,7 +1341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const documentId = `admin_bulk_${file.originalname.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
           
-          console.log(`Storing document: ${documentId}`);
+          console.log(`[BulkIndex] Storing document: ${documentId} (${fileContent.trim().length} characters)`);
           await ragService.storeDocument(
             adminUserId, 
             documentId, 
@@ -1327,7 +1349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `bulk-upload:${file.originalname}`
           );
 
-          console.log(`Successfully indexed: ${file.originalname}`);
+          console.log(`[BulkIndex] Successfully indexed: ${file.originalname}`);
           results.push({
             success: true,
             fileName: file.originalname,
@@ -1335,7 +1357,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
         } catch (fileError: any) {
-          console.error(`Error processing file ${file.originalname}:`, fileError);
+          console.error(`[BulkIndex] Error processing file ${file.originalname}:`, {
+            error: fileError.message,
+            stack: fileError.stack?.substring(0, 200)
+          });
           results.push({
             success: false,
             fileName: file.originalname,
@@ -1344,17 +1369,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      console.log(`Bulk indexing completed. Successful: ${results.filter(r => r.success).length}/${results.length}`);
+      const successCount = results.filter(r => r.success).length;
+      console.log(`[BulkIndex] Bulk indexing completed. Successful: ${successCount}/${results.length}`);
 
       res.json({
         message: 'Processamento de lote concluído',
         results,
         processed: results.length,
-        successful: results.filter(r => r.success).length
+        successful: successCount
       });
 
     } catch (error: any) {
-      console.error('Admin bulk index error:', error);
+      console.error('[BulkIndex] Admin bulk index error:', {
+        error: error.message,
+        stack: error.stack?.substring(0, 300),
+        userId: req.user?.id
+      });
       res.status(500).json({ message: 'Falha no processamento em lote', error: error.message });
     }
   });
