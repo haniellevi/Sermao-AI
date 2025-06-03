@@ -1,7 +1,7 @@
 
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthContext } from "@/lib/auth";
 import { 
   Home, 
   Plus, 
@@ -19,16 +19,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { user, logout } = useAuthContext();
+  const [location, setLocation] = useLocation();
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    setLocation('/login');
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location === path;
 
   if (!user) return null;
 
