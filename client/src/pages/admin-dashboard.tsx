@@ -427,14 +427,28 @@ export default function AdminDashboard() {
                           <Eye className="h-4 w-4" />
                           Detalhes
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleUserDelete(user.id, user.name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Deletar
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                              Deletar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja deletar o usuário "{user.name}"? Esta ação não pode ser desfeita e todos os dados do usuário serão permanentemente removidos.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleUserDelete(user.id, user.name)}>
+                                Confirmar Exclusão
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   ))}
@@ -535,10 +549,12 @@ export default function AdminDashboard() {
                       Gerar relatórios detalhados do sistema
                     </p>
                   </div>
-                  <Button disabled>
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Em Breve
-                  </Button>
+                  <Link href="/admin/reports">
+                    <Button>
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      Acessar
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </CardContent>

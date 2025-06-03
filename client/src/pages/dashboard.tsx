@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar, BookOpen, Shield } from "lucide-react";
 import { useAuthContext } from "@/lib/auth";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export default function DashboardPage() {
   const { user } = useAuthContext();
@@ -209,6 +210,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 }
