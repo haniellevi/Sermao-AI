@@ -98,9 +98,21 @@ export default function AdminDashboard() {
 
   const handleUserStatusToggle = async (userId: number, currentStatus: boolean) => {
     try {
-      await apiRequest(`/api/admin/users/${userId}/status`, "PATCH", {
-        isActive: !currentStatus
+      const response = await fetch(`/api/admin/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          isActive: !currentStatus
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao alterar status do usuário');
+      }
       
       toast({
         title: "Sucesso",
@@ -111,7 +123,7 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || 'Erro ao alterar status do usuário',
         variant: "destructive",
       });
     }
@@ -120,7 +132,17 @@ export default function AdminDashboard() {
   const handleUserDelete = async (userId: number, userName: string) => {
     if (window.confirm(`Tem certeza que deseja deletar o usuário "${userName}"? Esta ação não pode ser desfeita.`)) {
       try {
-        await apiRequest(`/api/admin/users/${userId}`, "DELETE");
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao deletar usuário');
+        }
         
         toast({
           title: "Sucesso",
@@ -131,7 +153,7 @@ export default function AdminDashboard() {
       } catch (error: any) {
         toast({
           title: "Erro",
-          description: error.message,
+          description: error.message || 'Erro ao deletar usuário',
           variant: "destructive",
         });
       }
@@ -141,7 +163,17 @@ export default function AdminDashboard() {
   const handleRagDocDelete = async (documentId: string) => {
     if (window.confirm("Tem certeza que deseja remover este documento? Esta ação não pode ser desfeita.")) {
       try {
-        await apiRequest(`/api/admin/rag/documents/${documentId}`, "DELETE");
+        const response = await fetch(`/api/admin/rag/documents/${documentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao remover documento');
+        }
         
         toast({
           title: "Sucesso",
@@ -152,7 +184,7 @@ export default function AdminDashboard() {
       } catch (error: any) {
         toast({
           title: "Erro",
-          description: error.message,
+          description: error.message || 'Erro ao remover documento',
           variant: "destructive",
         });
       }
@@ -389,7 +421,11 @@ export default function AdminDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(`/admin/users/${user.id}`, '_blank')}
+                          onClick={() => {
+                            // Por enquanto, mostrar informações básicas em um alert
+                            // Posteriormente pode ser criada uma página de detalhes
+                            alert(`Detalhes do usuário:\nID: ${user.id}\nNome: ${user.name}\nEmail: ${user.email}\nRole: ${user.role}\nStatus: ${user.isActive ? 'Ativo' : 'Inativo'}\nCriado em: ${new Date(user.createdAt).toLocaleDateString('pt-BR')}`);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                           Detalhes
