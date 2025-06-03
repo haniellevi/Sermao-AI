@@ -38,21 +38,43 @@ class RagService {
 
   async storeDocument(userId: number, documentId: string, text: string, sourceUrl?: string): Promise<void> {
     try {
-      const chunks = this.chunkText(text);
+      console.log(`Storing document: ${documentId} for user: ${userId}`);
+      
+      // Clean and validate text
+      const cleanText = text.trim();
+      if (!cleanText || cleanText.length < 50) {
+        throw new Error('Documento muito pequeno ou vazio para indexação');
+      }
+
+      const chunks = this.chunkText(cleanText, 800, 100); // Smaller chunks for better retrieval
+      console.log(`Created ${chunks.length} chunks for document: ${documentId}`);
+
+      // Remove existing chunks for this document to avoid duplicates
+      await db.delete(ragChunks).where(eq(ragChunks.documentId, documentId));
 
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
-        const embedding = await this.generateEmbedding(chunk);
-
-        await db.insert(ragChunks).values({
-          documentId: `${documentId}_chunk_${i}`,
-          chunkText: chunk,
-          embeddingVector: JSON.stringify(embedding),
-          sourceUrl: sourceUrl || null,
-          pageNumber: i + 1,
-          userId: userId
-        });
+        
+        try {
+          const embedding = await this.generateEmbedding(chunk);
+          
+          await db.insert(ragChunks).values({
+            documentId: `${documentId}_chunk_${i}`,
+            chunkText: chunk,
+            embeddingVector: JSON.stringify(embedding),
+            sourceUrl: sourceUrl || null,
+            pageNumber: i + 1,
+            userId: userId
+          });
+          
+          console.log(`Stored chunk ${i + 1}/${chunks.length} for document: ${documentId}`);
+        } catch (chunkError) {
+          console.error(`Error storing chunk ${i} for document ${documentId}:`, chunkError);
+          // Continue with other chunks even if one fails
+        }
       }
+      
+      console.log(`Successfully stored document: ${documentId} with ${chunks.length} chunks`);
     } catch (error) {
       console.error('Error storing document:', error);
       throw error;
@@ -61,11 +83,12 @@ class RagService {
 
   async searchSimilarChunks(query: string, limit: number = 5): Promise<SearchResult[]> {
     try {
+      console.log(`Searching for: "${query}" with limit: ${limit}`);
       const queryEmbedding = await this.generateEmbedding(query);
 
-      // For now, return all chunks and calculate similarity in memory
-      // In production, you might want to use a vector database
-      const allChunks = await db.select().from(ragChunks).limit(100);
+      // Get more chunks for better search results
+      const allChunks = await db.select().from(ragChunks).limit(500);
+      console.log(`Found ${allChunks.length} chunks in database`);
 
       const results: SearchResult[] = [];
 
@@ -74,19 +97,27 @@ class RagService {
           const chunkEmbedding = JSON.parse(chunk.embeddingVector);
           const similarity = this.cosineSimilarity(queryEmbedding, chunkEmbedding);
 
-          results.push({
-            chunkText: chunk.chunkText,
-            similarity: similarity,
-            sourceUrl: chunk.sourceUrl || undefined
-          });
+          // Only include chunks with reasonable similarity
+          if (similarity > 0.3) {
+            results.push({
+              chunkText: chunk.chunkText,
+              similarity: similarity,
+              sourceUrl: chunk.sourceUrl || undefined
+            });
+          }
         } catch (error) {
           console.error('Error processing chunk:', error);
         }
       }
 
-      return results
+      const sortedResults = results
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
+      
+      console.log(`Returning ${sortedResults.length} similar chunks with similarities:`, 
+        sortedResults.map(r => r.similarity.toFixed(3)));
+      
+      return sortedResults;
     } catch (error) {
       console.error('Error searching chunks:', error);
       return [];
@@ -111,14 +142,47 @@ class RagService {
 
   async getEnhancedContext(userId: number, theme: string, additionalContext: string): Promise<string> {
     try {
-      const searchQuery = `${theme} ${additionalContext}`.trim();
-      const similarChunks = await this.searchSimilarChunks(searchQuery, 3);
+      console.log(`Getting enhanced context for theme: "${theme}", additional: "${additionalContext}"`);
+      
+      // Create multiple search queries for better coverage
+      const searchQueries = [
+        `${theme} ${additionalContext}`.trim(),
+        theme,
+        additionalContext
+      ].filter(q => q.length > 0);
 
-      if (similarChunks.length === 0) {
+      let allChunks: SearchResult[] = [];
+      
+      // Search with each query and combine results
+      for (const query of searchQueries) {
+        if (query.length > 3) {
+          const chunks = await this.searchSimilarChunks(query, 5);
+          allChunks = allChunks.concat(chunks);
+        }
+      }
+
+      // Remove duplicates and keep highest similarity
+      const uniqueChunks = allChunks.reduce((acc, chunk) => {
+        const existing = acc.find(c => c.chunkText === chunk.chunkText);
+        if (!existing || existing.similarity < chunk.similarity) {
+          acc = acc.filter(c => c.chunkText !== chunk.chunkText);
+          acc.push(chunk);
+        }
+        return acc;
+      }, [] as SearchResult[]);
+
+      const topChunks = uniqueChunks
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 4);
+
+      if (topChunks.length === 0) {
+        console.log('No relevant chunks found for enhanced context');
         return '';
       }
 
-      return similarChunks
+      console.log(`Found ${topChunks.length} relevant chunks for enhanced context`);
+
+      return topChunks
         .map(chunk => chunk.chunkText)
         .join('\n\n---\n\n');
     } catch (error) {
