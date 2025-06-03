@@ -209,7 +209,7 @@ export default function HistoryPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {sermon.title}
+                            {String(sermon.title || 'Sem título')}
                           </h3>
                           <Badge variant="secondary" className="text-xs">
                             ID: {sermon.id}
@@ -225,12 +225,18 @@ export default function HistoryPage() {
                           {(() => {
                             try {
                               const content = JSON.parse(sermon.content);
-                              const preview = typeof content.sermao === 'string' 
-                                ? content.sermao.substring(0, 200) + '...'
-                                : 'Conteúdo do sermão disponível';
-                              return preview;
+                              if (typeof content.sermao === 'string') {
+                                return content.sermao.substring(0, 200) + '...';
+                              } else {
+                                return 'Conteúdo do sermão disponível';
+                              }
                             } catch {
-                              return sermon.content?.substring(0, 200) + '...' || 'Conteúdo não disponível';
+                              const contentStr = typeof sermon.content === 'string' 
+                                ? sermon.content 
+                                : 'Conteúdo não disponível';
+                              return contentStr.length > 200 
+                                ? contentStr.substring(0, 200) + '...' 
+                                : contentStr;
                             }
                           })()}
                         </div>
