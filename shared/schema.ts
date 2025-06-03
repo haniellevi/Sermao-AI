@@ -113,10 +113,12 @@ export const passwordResetConfirmSchema = z.object({
 // Sermon generation schema
 export const generateSermonSchema = z.object({
   dnaType: z.enum(["padrao", "customizado"]),
-  theme: z.string().optional(),
+  theme: z.string().min(1, "Tema é obrigatório"),
   purpose: z.string().optional(),
   audience: z.string().optional(),
-  duration: z.string().optional(),
+  duration: z.string().refine((val) => val !== "nenhum" && val !== "", {
+    message: "Duração é obrigatória"
+  }),
   style: z.string().optional(),
   context: z.string().optional(),
   referenceUrls: z.string().optional(),

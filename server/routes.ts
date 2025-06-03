@@ -748,6 +748,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const validatedData = generateSermonSchema.parse(req.body);
 
+      // Additional server-side validation for required fields
+      if (!validatedData.theme || validatedData.theme.trim() === '') {
+        return res.status(400).json({ message: 'Tema do sermão é obrigatório' });
+      }
+
+      if (!validatedData.duration || validatedData.duration === 'nenhum' || validatedData.duration.trim() === '') {
+        return res.status(400).json({ message: 'Duração do sermão é obrigatória' });
+      }
+
       // Get active DNA profile
       const activeDnaProfile = await storage.getActiveDnaProfile(userId);
 

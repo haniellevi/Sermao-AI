@@ -44,7 +44,7 @@ export default function GenerateSermonPage() {
       theme: "",
       purpose: "nenhum",
       audience: "nenhum",
-      duration: "nenhum",
+      duration: "",
       style: "nenhum",
       context: "nenhum",
       referenceUrls: "",
@@ -166,16 +166,23 @@ export default function GenerateSermonPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  <strong>Campos obrigatórios:</strong> Tema do Sermão e Duração são necessários para gerar um sermão de qualidade.
+                </p>
+              </div>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Theme */}
                   <div className="md:col-span-2">
-                    <Label htmlFor="theme">Tema do Sermão</Label>
+                    <Label htmlFor="theme" className="flex items-center">
+                      Tema do Sermão <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="theme"
                       placeholder="Ex: A Graça Transformadora de Deus"
                       {...register("theme")}
-                      className="mt-1"
+                      className={`mt-1 ${errors.theme ? 'border-red-500' : ''}`}
                     />
                     {errors.theme && (
                       <p className="text-sm text-destructive mt-1">{errors.theme.message}</p>
@@ -221,13 +228,14 @@ export default function GenerateSermonPage() {
 
                   {/* Duration */}
                   <div>
-                    <Label htmlFor="duration">Duração Aproximada</Label>
+                    <Label htmlFor="duration" className="flex items-center">
+                      Duração Aproximada <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Select onValueChange={(value) => setValue("duration", value)}>
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
                         <SelectValue placeholder="Selecione a duração" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="nenhum">Nenhum</SelectItem>
                         <SelectItem value="10-minutos">10 minutos</SelectItem>
                         <SelectItem value="15-minutos">15 minutos</SelectItem>
                         <SelectItem value="30-minutos">30 minutos</SelectItem>
@@ -235,6 +243,9 @@ export default function GenerateSermonPage() {
                         <SelectItem value="60-minutos">60 minutos</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.duration && (
+                      <p className="text-sm text-destructive mt-1">{errors.duration.message}</p>
+                    )}
                   </div>
 
                   {/* Preaching Style */}
