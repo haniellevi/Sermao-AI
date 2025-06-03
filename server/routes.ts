@@ -61,7 +61,7 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
 
 // Helper functions
 const generateToken = (userId: number): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '30d' });
 };
 
 const hashPassword = async (password: string): Promise<string> => {

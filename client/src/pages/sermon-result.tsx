@@ -138,12 +138,26 @@ export default function SermonResultPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/sermons'] });
       navigate('/dashboard');
     },
-    onError: (error) => {
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir o sermão.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      console.error("Erro ao excluir sermão:", error);
+      if (error.message.includes('Token inválido') || error.message.includes('Token de acesso')) {
+        toast({
+          title: "Sessão expirada",
+          description: "Sua sessão expirou. Redirecionando para login...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        toast({
+          title: "Erro ao excluir",
+          description: error.message || "Não foi possível excluir o sermão.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
