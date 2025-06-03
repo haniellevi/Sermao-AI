@@ -14,12 +14,11 @@ import {
   generateSermonSchema,
   createDnaSchema,
   type User
-} from "@shared/schema";
+} from "../shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ragService } from "./ragService";
-import { ChromaClient } from 'chromadb';
 import { db } from "./db";
-import { users, sermons, dnaProfiles, ragChunks } from "@shared/schema";
+import { users, sermons, dnaProfiles, ragChunks } from "../shared/schema";
 import { sql, eq } from "drizzle-orm";
 
 // Configuration
@@ -355,35 +354,11 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 // RAG helper function
 const retrieve_relevant_chunks = async (query_text: string, num_results: number = 3): Promise<string[]> => {
   try {
-    // Initialize ChromaDB client
-    const chromaClient = new ChromaClient({
-      path: path.join(process.cwd(), 'backend', 'data', 'chromadb')
-    });
-
-    // Get the collection
-    const collection = await chromaClient.getCollection({
-      name: "bible_comments_rag"
-    });
-
-    // Generate embedding for query text using Gemini
-    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-    const result = await model.embedContent(query_text);
-    const queryEmbedding = result.embedding.values;
-
-    // Search for similar chunks in ChromaDB
-    const searchResults = await collection.query({
-      queryEmbeddings: [queryEmbedding],
-      nResults: num_results
-    });
-
-    // Extract and return the document texts
-    if (searchResults.documents && searchResults.documents[0]) {
-      return searchResults.documents[0].filter(doc => doc !== null) as string[];
-    }
-
-    return [];
+    // Use the RAG service instead of direct ChromaDB access
+    const chunks = await ragService.searchSimilarChunks(query_text, num_results);
+    return chunks.map(chunk => chunk.chunkText);
   } catch (error) {
-    console.error('Error retrieving chunks from ChromaDB:', error);
+    console.error('Error retrieving chunks:', error);
     return [];
   }
 };
