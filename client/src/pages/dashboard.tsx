@@ -6,7 +6,7 @@ import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar } from "lucide-react
 import { useAuthContext } from "@/lib/auth";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
 
   const { data: dnaData } = useQuery({
     queryKey: ["/api/user/dna"],
@@ -24,7 +24,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
 
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
