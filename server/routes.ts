@@ -56,9 +56,9 @@ const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
     console.log('Token decoded successfully:', { userId: decoded.userId });
-    
+
     const user = await storage.getUser(decoded.userId);
-    
+
     if (!user) {
       console.log('User not found for ID:', decoded.userId);
       return res.status(401).json({ message: 'Token inválido' });
@@ -96,18 +96,18 @@ const callGemini = async (prompt: string, isLongForm = false): Promise<string> =
     const model = genAI.getGenerativeModel({ 
       model: isLongForm ? "gemini-1.5-pro" : "gemini-1.5-flash" 
     });
-    
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error: any) {
     console.error('Gemini AI error:', error);
-    
+
     // Check if it's a quota exceeded error
     if (error.status === 429 || error.message?.includes('quota') || error.message?.includes('Too Many Requests')) {
       throw new Error('Limite de uso da IA atingido. Uma nova chave de API é necessária para continuar gerando sermões.');
     }
-    
+
     throw new Error('Falha na comunicação com a IA');
   }
 };
@@ -123,22 +123,22 @@ const processDNA = async (
   try {
     // Create analysis prompt
     let contentForAnalysis = '';
-    
+
     // Add personal description
     if (personalDescription.trim()) {
       contentForAnalysis += 'DESCRIÇÃO PESSOAL DO PREGADOR:\n' + personalDescription + '\n\n';
     }
-    
+
     // Add pasted texts
     if (pastedTexts.length > 0) {
       contentForAnalysis += 'TEXTOS FORNECIDOS:\n' + pastedTexts.join('\n\n') + '\n\n';
     }
-    
+
     // Add YouTube links
     if (youtubeLinks.length > 0) {
       contentForAnalysis += 'LINKS DO YOUTUBE:\n' + youtubeLinks.join('\n') + '\n\n';
     }
-    
+
     // Add file information
     if (files.length > 0) {
       contentForAnalysis += 'ARQUIVOS ENVIADOS:\n';
@@ -248,18 +248,18 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.
 `;
 
     const dnaResponse = await callGemini(dnaPrompt);
-    
+
     try {
       // Clean the response to remove markdown formatting
       let cleanedResponse = dnaResponse.trim();
-      
+
       // Remove markdown code block markers
       if (cleanedResponse.startsWith('```json')) {
         cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (cleanedResponse.startsWith('```')) {
         cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
-      
+
       return JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error('Erro ao processar resposta da IA:', parseError);
@@ -434,7 +434,7 @@ Formato de Resposta (APENAS JSON):
 Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 
     const response = await callGemini(sermonPrompt, true);
-    
+
     // Clean and parse the response
     let cleanedResponse = response.trim();
     if (cleanedResponse.startsWith('```json')) {
@@ -442,13 +442,13 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
     } else if (cleanedResponse.startsWith('```')) {
       cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
+
     try {
       return JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error('Erro ao processar resposta do sermão:', parseError);
       console.error('Resposta original:', response);
-      
+
       // Fallback response
       return {
         sermao: "## Sermão Gerado\n\nDevido a problemas técnicos, o sermão não pôde ser gerado completamente. Por favor, tente novamente.",
@@ -474,25 +474,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register', async (req, res) => {
     try {
       const { email, password, name } = req.body;
-      
+
       // Validate password requirements
       if (!password || password.length < 6) {
         return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres' });
       }
-      
+
       if (!/[0-9]/.test(password)) {
         return res.status(400).json({ message: 'A senha deve conter pelo menos um número' });
       }
-      
+
       if (!/[^a-zA-Z0-9]/.test(password)) {
         return res.status(400).json({ message: 'A senha deve conter pelo menos um caractere especial' });
       }
-      
+
       // Validate other fields
       if (!email || !name) {
         return res.status(400).json({ message: 'Email e nome são obrigatórios' });
       }
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
@@ -501,7 +501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hash password
       const hashedPassword = await hashPassword(password);
-      
+
       // Create user
       const user = await storage.createUser({
         email,
@@ -530,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { email, password } = loginSchema.parse(req.body);
-      
+
       // Find user
       const user = await storage.getUserByEmail(email);
       if (!user) {
@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/reset-password/request', async (req, res) => {
     try {
       const { email } = passwordResetRequestSchema.parse(req.body);
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.json({ message: 'Se uma conta com este email existir, um link de redefinição foi enviado.' });
@@ -596,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/reset-password/confirm', async (req, res) => {
     try {
       const { token, password } = passwordResetConfirmSchema.parse(req.body);
-      
+
       const resetToken = await storage.getPasswordResetToken(token);
       if (!resetToken || resetToken.used || resetToken.expiresAt < new Date()) {
         return res.status(400).json({ message: 'Token de redefinição inválido ou expirado' });
@@ -604,10 +604,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Hash new password
       const hashedPassword = await hashPassword(password);
-      
+
       // Update user password
       await storage.updateUser(resetToken.userId, { password: hashedPassword });
-      
+
       // Mark token as used
       await storage.markPasswordResetTokenUsed(resetToken.id);
 
@@ -656,7 +656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       const files = req.files as Express.Multer.File[] || [];
-      
+
       // Parse JSON fields from form data
       const pastedTexts = req.body.pastedTexts ? JSON.parse(req.body.pastedTexts) : [];
       const youtubeLinks = req.body.youtubeLinks ? JSON.parse(req.body.youtubeLinks) : [];
@@ -722,6 +722,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DNA Profile Routes
+  app.get('/api/dna-profiles', authenticateToken, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const profiles = await storage.getDnaProfilesByUserId(userId);
+      res.json(profiles);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || 'Erro ao buscar perfis DNA' });
+    }
+  });
+
+  // Upload de arquivos para DNA
+  app.post('/api/dna-profiles/upload', authenticateToken, upload.array('files', 10), async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: 'Nenhum arquivo enviado' });
+      }
+
+      const uploadedFiles = [];
+      for (const file of files) {
+        const key = await storage.uploadDnaFile(userId, file.originalname, file.buffer);
+        uploadedFiles.push({
+          name: file.originalname,
+          size: file.size,
+          type: file.mimetype,
+          key: key
+        });
+      }
+
+      res.json({ files: uploadedFiles });
+    } catch (error: any) {
+      console.error('Erro no upload de arquivos DNA:', error);
+      res.status(500).json({ message: error.message || 'Erro ao fazer upload dos arquivos' });
+    }
+  });
+
+  // Download de arquivo armazenado
+  app.get('/api/files/:key(*)', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const key = req.params.key;
+      const fileBuffer = await storage.downloadFile(key);
+
+      // Determinar o tipo de conteúdo baseado na extensão
+      const fileName = key.split('/').pop() || 'file';
+      const ext = fileName.split('.').pop()?.toLowerCase();
+
+      let contentType = 'application/octet-stream';
+      if (ext === 'pdf') contentType = 'application/pdf';
+      else if (ext === 'txt') contentType = 'text/plain';
+      else if (ext === 'docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      else if (ext === 'doc') contentType = 'application/msword';
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.send(fileBuffer);
+    } catch (error: any) {
+      console.error('Erro ao baixar arquivo:', error);
+      res.status(404).json({ message: 'Arquivo não encontrado' });
+    }
+  });
+
   app.post('/api/sermon/generate', authenticateToken, async (req: AuthRequest, res) => {
     try {
       const userId = req.user!.id;
@@ -738,7 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check current sermon count and maintain limit of 5
       const existingSermons = await storage.getSermonsByUserId(userId);
-      
+
       // If user has 5 or more sermons, delete the oldest ones
       if (existingSermons.length >= 5) {
         const sermonsToDelete = existingSermons
@@ -748,7 +811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return dateA - dateB;
           })
           .slice(0, existingSermons.length - 4); // Keep 4, delete the rest
-        
+
         for (const sermonToDelete of sermonsToDelete) {
           await storage.deleteSermon(sermonToDelete.id);
         }
@@ -789,7 +852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       const sermonId = parseInt(req.params.id);
-      
+
       const sermon = await storage.getSermon(sermonId);
       if (!sermon || sermon.userId !== userId) {
         return res.status(404).json({ message: 'Sermão não encontrado' });

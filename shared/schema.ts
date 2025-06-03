@@ -25,25 +25,29 @@ export const users = pgTable("users", {
 export const dnaProfiles = pgTable("dna_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // "padrao" or "customizado"
-  customAttributes: jsonb("custom_attributes"), // JSON string for AI-generated DNA characteristics
-  uploadedFiles: jsonb("uploaded_files"), // Array of file metadata
-  pastedTexts: jsonb("pasted_texts"), // Array of sermon texts
-  youtubeLinks: jsonb("youtube_links"), // Array of YouTube URLs
-  content: text("content"), // JSON string with all input data including personal description
+  type: varchar("type", { length: 50 }).notNull(),
+  customAttributes: jsonb("custom_attributes"),
+  uploadedFiles: jsonb("uploaded_files").default([]),
+  pastedTexts: jsonb("pasted_texts").default([]),
+  youtubeLinks: jsonb("youtube_links").default([]),
+  objectStorageKeys: jsonb("object_storage_keys").default([]), // Chaves dos arquivos no Object Storage
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const sermons = pgTable("sermons", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  dnaProfileId: integer("dna_profile_id").references(() => dnaProfiles.id),
-  title: text("title").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
-  parameters: jsonb("parameters"), // JSON of generation parameters
-  qualityScore: integer("quality_score"),
-  suggestions: jsonb("suggestions"), // Array of enhancement suggestions
+  baseText: varchar("base_text", { length: 255 }),
+  theme: varchar("theme", { length: 255 }),
+  duration: integer("duration"),
+  targetAudience: varchar("target_audience", { length: 255 }),
+  occasion: varchar("occasion", { length: 255 }),
+  metadata: jsonb("metadata").default({}), // Para armazenar chaves do Object Storage e outros dados
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {

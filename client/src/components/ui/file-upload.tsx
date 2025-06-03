@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, File, X, FileText, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useObjectStorage } from "@/hooks/use-object-storage";
 
 interface FileUploadProps {
   onFilesChange: (files: File[]) => void;
