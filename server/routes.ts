@@ -1,4 +1,3 @@
-
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import jwt from "jsonwebtoken";
@@ -47,21 +46,22 @@ interface AuthRequest extends Express.Request {
 }
 
 const authenticateToken = async (req: AuthRequest, res: any, next: any) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  console.log('Authentication attempt:', {
-    hasAuthHeader: !!authHeader,
-    hasToken: !!token,
-    tokenLength: token ? token.length : 0,
-    method: (req as any).method,
-    url: (req as any).url
-  });
+    console.log('Authentication attempt:', {
+      hasAuthHeader: !!authHeader,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      method: (req as any).method,
+      url: (req as any).url,
+      authHeaderPreview: authHeader ? authHeader.substring(0, 20) + '...' : 'none'
+    });
 
-  if (!token) {
-    console.log('No token provided');
-    return res.status(401).json({ message: 'Token de acesso necessário' });
-  }
+    if (!token) {
+      console.log('No token provided - authHeader:', authHeader);
+      return res.status(401).json({ message: 'Token de acesso necessário' });
+    }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
@@ -108,7 +108,7 @@ const transcribeYouTubeVideo = async (url: string): Promise<{ text: string, dura
     { text: "A fé é o fundamento da vida cristã. Sem fé é impossível agradar a Deus. Hebreus 11:6 nos ensina claramente isso. Mas o que é fé? Fé é confiança absoluta em Deus. É crer mesmo quando não vemos. É ter certeza das coisas que esperamos. A fé nos move montanhas, a fé nos dá esperança, a fé nos transforma.", duration_minutes: 12.3 },
     { text: "Irmãos, a oração é nossa comunicação direta com o Pai. Jesus nos ensinou a orar. O Pai Nosso é o modelo perfeito de oração. Começamos reconhecendo a santidade de Deus. Pedimos que Sua vontade seja feita. Buscamos o pão diário. Perdoamos como fomos perdoados. E confiamos na proteção divina contra o mal.", duration_minutes: 15.7 }
   ];
-  
+
   // Return random mock data
   const randomIndex = Math.floor(Math.random() * mockTranscriptions.length);
   return mockTranscriptions[randomIndex];
@@ -147,7 +147,7 @@ const callGeminiChatModel = async (messages: any[], isLongForm = false): Promise
     // Convert messages to Gemini format
     const systemMessage = messages.find(m => m.role === 'system');
     const userMessage = messages.find(m => m.role === 'user');
-    
+
     let prompt = '';
     if (systemMessage) {
       prompt += systemMessage.parts[0].text + '\n\n';
@@ -197,7 +197,7 @@ const processDNA = async (
     // Get enhanced context from RAG service for DNA analysis
     const ragContextQuery = `análise homilética estilo pregação teologia pastoral ${personalDescription}`;
     const ragContext = await ragService.getEnhancedContext(userId, ragContextQuery, '');
-    
+
     let ragContextForDNA = '';
     if (ragContext && ragContext.trim()) {
       ragContextForDNA = `
@@ -222,7 +222,7 @@ ${ragContext}
 
     if (youtubeLinks.length > 0) {
       contentForAnalysis += 'LINKS DO YOUTUBE:\n';
-      
+
       for (const link of youtubeLinks) {
         if (link && link.trim()) {
           try {
@@ -234,10 +234,10 @@ ${ragContext}
             if (transcription_text && video_duration > 0) {
               const word_count = transcription_text.split(/\s+/).length;
               const ppm = (word_count / video_duration).toFixed(2);
-              
+
               total_video_words += word_count;
               total_video_duration_minutes += video_duration;
-              
+
               video_details.push(`- Vídeo: ${link}, Duração: ${video_duration} min, Palavras: ${word_count}, PPM: ${ppm}`);
               contentForAnalysis += `\n[Transcrição de Vídeo ${link} (${video_duration} min)]:\n${transcription_text}\n`;
             } else {
@@ -258,7 +258,7 @@ ${ragContext}
         contentForAnalysis += `Velocidade média de fala identificada: ${average_ppm} palavras por minuto (PPM).\n`;
         contentForAnalysis += `Detalhes por vídeo:\n${video_details.join('\n')}\n`;
       }
-      
+
       contentForAnalysis += '\n';
     }
 
@@ -559,30 +559,30 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.
 
     // Clean and parse the response
     let cleanedResponse = response.trim();
-    
+
     // Remove markdown code blocks
     if (cleanedResponse.startsWith('```json')) {
       cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (cleanedResponse.startsWith('```')) {
       cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
+
     // Find JSON content between first { and last }
     const firstBrace = cleanedResponse.indexOf('{');
     const lastBrace = cleanedResponse.lastIndexOf('}');
-    
+
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
     }
 
     try {
       const parsedResponse = JSON.parse(cleanedResponse);
-      
+
       // Validate that the response has the expected structure
       if (!parsedResponse.sermao) {
         throw new Error('Resposta inválida: campo "sermao" não encontrado');
       }
-      
+
       return parsedResponse;
     } catch (parseError) {
       console.error('Erro ao processar resposta do sermão:', parseError);
@@ -652,7 +652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
+      const existingUser = await```tool_code
+storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: 'Usuário já existe com este email' });
       }
@@ -1041,7 +1042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       const files = req.files as Express.Multer.File[] || [];
-      
+
       if (files.length === 0) {
         return res.status(400).json({ message: 'Nenhum documento foi enviado' });
       }
@@ -1053,7 +1054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const documentId = `doc_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           const text = file.buffer.toString('utf-8');
-          
+
           // Store document in RAG service
           await ragService.storeDocument(userId, documentId, text, file.originalname);
           documentsProcessed++;
@@ -1063,7 +1064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stats = await ragService.getUserDocumentStats(userId);
-      
+
       res.json({
         message: `${documentsProcessed} documento(s) processado(s) com sucesso`,
         documentsProcessed,
@@ -1127,7 +1128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeUsers = await db.select({ count: sql`count(*)` })
         .from(users)
         .where(sql`${users.createdAt} >= NOW() - INTERVAL '30 days'`);
-      
+
       // Get sermon statistics  
       const totalSermons = await db.select({ count: sql`count(*)` }).from(sermons);
       const recentSermons = await db.select()
@@ -1139,7 +1140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customDnaCount = await db.select({ count: sql`count(*)` })
         .from(dnaProfiles)
         .where(eq(dnaProfiles.type, "customizado"));
-      
+
       const totalDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles);
 
       // Get RAG statistics
@@ -1182,7 +1183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
-      
+
       if (!user) {
         return res.status(404).json({ message: 'Usuário não encontrado' });
       }
@@ -1208,7 +1209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { isActive } = req.body;
 
       const updatedUser = await storage.updateUser(userId, { isActive });
-      
+
       if (!updatedUser) {
         return res.status(404).json({ message: 'Usuário não encontrado' });
       }
@@ -1227,7 +1228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/users/:id', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const userId = parseInt(req.params.id);
-      
+
       // Check if user exists
       const user = await storage.getUser(userId);
       if (!user) {
@@ -1249,7 +1250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const documents = await db.select().from(ragChunks)
         .orderBy(sql`${ragChunks.createdAt} DESC`);
-      
+
       // Group by document_id
       const groupedDocs = documents.reduce((acc: any, chunk) => {
         if (!acc[chunk.documentId]) {
@@ -1276,9 +1277,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/rag/documents/:documentId', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
     try {
       const documentId = req.params.documentId;
-      
+
       await db.delete(ragChunks).where(eq(ragChunks.documentId, documentId));
-      
+
       res.json({ message: 'Documento RAG removido com sucesso' });
     } catch (error: any) {
       console.error('Admin RAG delete error:', error);
@@ -1291,7 +1292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const files = req.files as Express.Multer.File[] || [];
       const adminUserId = req.user!.id;
-      
+
       if (files.length === 0) {
         return res.status(400).json({ message: 'Nenhum arquivo foi enviado' });
       }
@@ -1302,7 +1303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const fileContent = file.buffer.toString('utf-8');
           const documentId = `admin_bulk_${file.originalname}_${Date.now()}`;
-          
+
           await ragService.storeDocument(
             adminUserId, 
             documentId, 
@@ -1342,11 +1343,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/reports', authenticateToken, isAdmin, async (req: AuthRequest, res: any) => {
     try {
       const period = req.query.period as string || 'month';
-      
+
       // Calculate date range based on period
       const now = new Date();
       let startDate = new Date();
-      
+
       switch (period) {
         case 'week':
           startDate.setDate(now.getDate() - 7);
@@ -1370,7 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalSermons = await db.select({ count: sql`count(*)` }).from(sermons);
       const recentSermons = await db.select({ count: sql`count(*)` }).from(sermons)
         .where(sql`${sermons.createdAt} >= ${startDate}`);
-      
+
       const totalUsersCount = Number(totalUsers[0]?.count) || 0;
       const totalSermonsCount = Number(totalSermons[0]?.count) || 0;
       const avgSermonsPerUser = totalUsersCount > 0 ? totalSermonsCount / totalUsersCount : 0;
@@ -1388,7 +1389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(dnaProfiles.type, 'custom'));
       const defaultDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles)
         .where(eq(dnaProfiles.type, 'default'));
-      
+
       const totalDnaCount = Number(totalDnaProfiles[0]?.count) || 0;
       const avgProfilesPerUser = totalUsersCount > 0 ? totalDnaCount / totalUsersCount : 0;
 
@@ -1397,7 +1398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         count: sql`count(distinct ${ragChunks.documentId})` 
       }).from(ragChunks);
       const totalRagChunks = await db.select({ count: sql`count(*)` }).from(ragChunks);
-      
+
       const totalDocsCount = Number(totalRagDocs[0]?.count) || 0;
       const totalChunksCount = Number(totalRagChunks[0]?.count) || 0;
       const avgChunksPerDoc = totalDocsCount > 0 ? totalChunksCount / totalDocsCount : 0;

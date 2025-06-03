@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,19 @@ export default function AdminBulkIndexPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuthContext();
+
+  // Verificar autenticação no carregamento
+  React.useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast({
+        title: "Erro de Autenticação",
+        description: "Token não encontrado. Faça login novamente.",
+        variant: "destructive",
+      });
+      setLocation('/login');
+    }
+  }, []);
 
   if (!user || user.role !== 'admin') {
     return (
@@ -79,11 +92,6 @@ export default function AdminBulkIndexPage() {
     setProgress(0);
     setResults([]);
 
-    const formData = new FormData();
-    Array.from(selectedFiles).forEach((file) => {
-      formData.append('documents', file);
-    });
-
     // Simular progresso durante upload
     const progressInterval = setInterval(() => {
       setProgress(prev => Math.min(prev + Math.random() * 15, 90));
@@ -95,6 +103,13 @@ export default function AdminBulkIndexPage() {
         clearInterval(progressInterval);
         throw new Error('Token de autenticação não encontrado');
       }
+
+      console.log('Token encontrado:', token.substring(0, 20) + '...');
+
+      const formData = new FormData();
+      Array.from(selectedFiles).forEach((file) => {
+        formData.append('documents', file);
+      });
 
       const response = await fetch('/api/admin/rag/bulk-index', {
         method: 'POST',
