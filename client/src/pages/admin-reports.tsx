@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ interface SystemReport {
 
 export default function AdminReportsPage() {
   const { user } = useAuthContext();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [reportPeriod, setReportPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   const { data: report, isLoading, error } = useQuery({
@@ -118,7 +118,7 @@ export default function AdminReportsPage() {
         <div className="mb-6">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/admin')}
+            onClick={() => setLocation('/admin')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

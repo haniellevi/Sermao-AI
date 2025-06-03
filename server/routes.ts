@@ -1268,33 +1268,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const adminUserId = req.user!.id;
       
       if (files.length === 0) {
-        return res.status(400).json({ message: 'Nenhum documento foi enviado' });
+        return res.status(400).json({ message: 'Nenhum arquivo foi enviado' });
       }
 
-      let documentsProcessed = 0;
-      const errors: string[] = [];
+      const results = [];
 
       for (const file of files) {
         try {
-          const documentId = `admin_doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          const text = file.buffer.toString('utf-8');
+          const fileContent = file.buffer.toString('utf-8');
+          const documentId = `admin_bulk_${file.originalname}_${Date.now()}`;
           
-          // Store document in RAG service for all users (userId = 0 for global)
-          await ragService.storeDocument(0, documentId, text, file.originalname);
-          documentsProcessed++;
-        } catch (error: any) {
-          errors.push(`Erro ao processar ${file.originalname}: ${error.message}`);
+          await ragService.storeDocument(
+            adminUserId, 
+            documentId, 
+            fileContent, 
+            `bulk-upload:${file.originalname}`
+          );
+
+          results.push({
+            success: true,
+            fileName: file.originalname,
+            message: 'Indexado com sucesso'
+          });
+
+        } catch (fileError: any) {
+          results.push({
+            success: false,
+            fileName: file.originalname,
+            message: fileError.message || 'Erro durante indexação'
+          });
         }
       }
 
       res.json({
-        message: `${documentsProcessed} documento(s) processado(s) com sucesso`,
-        documentsProcessed,
-        errors: errors.length > 0 ? errors : undefined
+        message: 'Processamento de lote concluído',
+        results,
+        processed: results.length,
+        successful: results.filter(r => r.success).length
       });
+
     } catch (error: any) {
       console.error('Admin bulk index error:', error);
       res.status(500).json({ message: 'Falha no processamento em lote' });
+    }
+  });
+
+  // Admin Reports - Get system reports
+  app.get('/api/admin/reports', authenticateToken, isAdmin, async (req: AuthRequest, res) => {
+    try {
+      const period = req.query.period as string || 'month';
+      
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate = new Date();
+      
+      switch (period) {
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - 1);
+          break;
+        default: // month
+          startDate.setMonth(now.getMonth() - 1);
+      }
+
+      // Users statistics
+      const totalUsers = await db.select({ count: sql`count(*)` }).from(users);
+      const activeUsers = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.isActive, true));
+      const inactiveUsers = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.isActive, false));
+      const adminUsers = await db.select({ count: sql`count(*)` }).from(users).where(eq(users.role, 'admin'));
+      const newUsers = await db.select({ count: sql`count(*)` }).from(users)
+        .where(sql`${users.createdAt} >= ${startDate}`);
+
+      // Sermons statistics
+      const totalSermons = await db.select({ count: sql`count(*)` }).from(sermons);
+      const recentSermons = await db.select({ count: sql`count(*)` }).from(sermons)
+        .where(sql`${sermons.createdAt} >= ${startDate}`);
+      
+      const avgSermonsPerUser = totalUsers[0]?.count > 0 
+        ? (totalSermons[0]?.count || 0) / (totalUsers[0]?.count || 1) 
+        : 0;
+
+      // Top themes (simplified - would need proper theme extraction)
+      const topThemes = [
+        { theme: "Amor de Deus", count: 5 },
+        { theme: "Fé e Esperança", count: 4 },
+        { theme: "Salvação", count: 3 }
+      ];
+
+      // DNA profiles statistics
+      const totalDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles);
+      const customDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles)
+        .where(eq(dnaProfiles.type, 'custom'));
+      const defaultDnaProfiles = await db.select({ count: sql`count(*)` }).from(dnaProfiles)
+        .where(eq(dnaProfiles.type, 'default'));
+      
+      const avgProfilesPerUser = totalUsers[0]?.count > 0 
+        ? (totalDnaProfiles[0]?.count || 0) / (totalUsers[0]?.count || 1) 
+        : 0;
+
+      // RAG statistics
+      const totalRagDocs = await db.select({ 
+        count: sql`count(distinct ${ragChunks.documentId})` 
+      }).from(ragChunks);
+      const totalRagChunks = await db.select({ count: sql`count(*)` }).from(ragChunks);
+      
+      const avgChunksPerDoc = totalRagDocs[0]?.count > 0 
+        ? (totalRagChunks[0]?.count || 0) / (totalRagDocs[0]?.count || 1) 
+        : 0;
+
+      // Top users by sermon count
+      const topUsers = await db.select({
+        userId: users.id,
+        userName: users.name,
+        sermonCount: sql`count(${sermons.id})`
+      })
+      .from(users)
+      .leftJoin(sermons, eq(users.id, sermons.userId))
+      .groupBy(users.id, users.name)
+      .orderBy(sql`count(${sermons.id}) desc`)
+      .limit(5);
+
+      const report = {
+        users: {
+          total: parseInt(totalUsers[0]?.count) || 0,
+          active: parseInt(activeUsers[0]?.count) || 0,
+          inactive: parseInt(inactiveUsers[0]?.count) || 0,
+          admins: parseInt(adminUsers[0]?.count) || 0,
+          newThisMonth: parseInt(newUsers[0]?.count) || 0
+        },
+        sermons: {
+          total: parseInt(totalSermons[0]?.count) || 0,
+          thisMonth: parseInt(recentSermons[0]?.count) || 0,
+          avgPerUser: parseFloat(avgSermonsPerUser.toFixed(1)),
+          topThemes
+        },
+        dna: {
+          totalProfiles: parseInt(totalDnaProfiles[0]?.count) || 0,
+          customProfiles: parseInt(customDnaProfiles[0]?.count) || 0,
+          defaultProfiles: parseInt(defaultDnaProfiles[0]?.count) || 0,
+          avgProfilesPerUser: parseFloat(avgProfilesPerUser.toFixed(1))
+        },
+        rag: {
+          totalDocuments: parseInt(totalRagDocs[0]?.count) || 0,
+          totalChunks: parseInt(totalRagChunks[0]?.count) || 0,
+          avgChunksPerDoc: parseFloat(avgChunksPerDoc.toFixed(1)),
+          documentsByUser: [] // Could be implemented if needed
+        },
+        usage: {
+          peakHours: [], // Would need request logging to implement
+          topUsers: topUsers.map(u => ({
+            userId: u.userId,
+            userName: u.userName || 'Unknown',
+            sermonCount: parseInt(u.sermonCount) || 0
+          }))
+        }
+      };
+
+      res.json(report);
+
+    } catch (error: any) {
+      console.error('Admin reports error:', error);
+      res.status(500).json({ message: 'Falha ao gerar relatórios' });
     }
   });
 

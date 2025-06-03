@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ export default function AdminBulkIndexPage() {
   const [results, setResults] = useState<UploadResult[]>([]);
   const { user } = useAuthContext();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   if (!user || user.role !== 'admin') {
     return (
@@ -100,7 +100,7 @@ export default function AdminBulkIndexPage() {
         <div className="mb-6">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/admin')}
+            onClick={() => setLocation('/admin')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
