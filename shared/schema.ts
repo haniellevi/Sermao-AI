@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").default(true),
   activeDnaProfileId: integer("active_dna_profile_id"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const dnaProfiles = pgTable("dna_profiles", {
