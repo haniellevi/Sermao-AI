@@ -108,14 +108,6 @@ export default function AdminBulkIndexPage() {
     }, 500);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        clearInterval(progressInterval);
-        throw new Error('Token de autenticação não encontrado');
-      }
-
-      console.log('Token encontrado:', token.substring(0, 20) + '...');
-
       const formData = new FormData();
       Array.from(selectedFiles).forEach((file) => {
         formData.append('documents', file);
@@ -123,9 +115,7 @@ export default function AdminBulkIndexPage() {
 
       const response = await fetch('/api/admin/rag/bulk-index', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        credentials: 'include',
         body: formData
       });
 
