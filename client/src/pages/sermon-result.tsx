@@ -119,7 +119,7 @@ export default function SermonResultPage() {
       // Espera um momento para garantir que o token foi atualizado após login
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       console.log('Token being used for deletion:', {
         exists: !!token,
         length: token?.length || 0,
