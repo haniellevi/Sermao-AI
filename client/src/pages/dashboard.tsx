@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar, BookOpen, Shield } from "lucide-react";
 import { useAuthContext } from "@/lib/auth";
+import Header from "@/components/Header";
 
 export default function DashboardPage() {
   const { user } = useAuthContext();
@@ -24,7 +25,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-
+      <Header />
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8 animate-gentle-fade">
