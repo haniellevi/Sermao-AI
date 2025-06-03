@@ -97,6 +97,20 @@ const comparePassword = async (password: string, hash: string): Promise<boolean>
   return bcrypt.compare(password, hash);
 };
 
+// YouTube transcription function (mock implementation)
+const transcribeYouTubeVideo = async (url: string): Promise<{ text: string, duration_minutes: number }> => {
+  // Mock implementation - in production, integrate with actual transcription service
+  const mockTranscriptions = [
+    { text: "Amados irmãos, hoje vamos falar sobre o amor de Deus que nos transforma. O Senhor Jesus nos ensina que o amor é a base de tudo. Quando amamos verdadeiramente, seguimos os passos do Mestre. A palavra de Deus nos revela que o amor não é apenas um sentimento, mas uma decisão. Decidimos amar mesmo quando é difícil. Decidimos amar mesmo quando não sentimos vontade. Porque o amor de Cristo nos constrange.", duration_minutes: 8.5 },
+    { text: "A fé é o fundamento da vida cristã. Sem fé é impossível agradar a Deus. Hebreus 11:6 nos ensina claramente isso. Mas o que é fé? Fé é confiança absoluta em Deus. É crer mesmo quando não vemos. É ter certeza das coisas que esperamos. A fé nos move montanhas, a fé nos dá esperança, a fé nos transforma.", duration_minutes: 12.3 },
+    { text: "Irmãos, a oração é nossa comunicação direta com o Pai. Jesus nos ensinou a orar. O Pai Nosso é o modelo perfeito de oração. Começamos reconhecendo a santidade de Deus. Pedimos que Sua vontade seja feita. Buscamos o pão diário. Perdoamos como fomos perdoados. E confiamos na proteção divina contra o mal.", duration_minutes: 15.7 }
+  ];
+  
+  // Return random mock data
+  const randomIndex = Math.floor(Math.random() * mockTranscriptions.length);
+  return mockTranscriptions[randomIndex];
+};
+
 // AI helper functions
 const callGemini = async (prompt: string, isLongForm = false): Promise<string> => {
   try {
@@ -182,9 +196,51 @@ const processDNA = async (
       contentForAnalysis += 'TEXTOS FORNECIDOS:\n' + pastedTexts.join('\n\n') + '\n\n';
     }
 
-    // Add YouTube links
+    // Process YouTube links with duration and word count metrics
+    let total_video_duration_minutes = 0;
+    let total_video_words = 0;
+    let video_details = [];
+
     if (youtubeLinks.length > 0) {
-      contentForAnalysis += 'LINKS DO YOUTUBE:\n' + youtubeLinks.join('\n') + '\n\n';
+      contentForAnalysis += 'LINKS DO YOUTUBE:\n';
+      
+      for (const link of youtubeLinks) {
+        if (link && link.trim()) {
+          try {
+            // Mock data for demonstration - in production, use actual transcription service
+            const transcription_data = await transcribeYouTubeVideo(link);
+            const transcription_text = transcription_data.text;
+            const video_duration = transcription_data.duration_minutes;
+
+            if (transcription_text && video_duration > 0) {
+              const word_count = transcription_text.split(/\s+/).length;
+              const ppm = (word_count / video_duration).toFixed(2);
+              
+              total_video_words += word_count;
+              total_video_duration_minutes += video_duration;
+              
+              video_details.push(`- Vídeo: ${link}, Duração: ${video_duration} min, Palavras: ${word_count}, PPM: ${ppm}`);
+              contentForAnalysis += `\n[Transcrição de Vídeo ${link} (${video_duration} min)]:\n${transcription_text}\n`;
+            } else {
+              contentForAnalysis += `${link} (Transcrição não disponível)\n`;
+            }
+          } catch (error) {
+            console.log(`Erro ao processar vídeo ${link}:`, error);
+            contentForAnalysis += `${link} (Erro na transcrição)\n`;
+          }
+        }
+      }
+
+      // Add video metrics summary
+      if (total_video_duration_minutes > 0) {
+        const average_ppm = (total_video_words / total_video_duration_minutes).toFixed(2);
+        contentForAnalysis += `\n--- MÉTRICAS GERAIS DE VÍDEOS DE PREGAÇÃO ---\n`;
+        contentForAnalysis += `Duração total dos vídeos analisados: ${total_video_duration_minutes.toFixed(2)} minutos.\n`;
+        contentForAnalysis += `Velocidade média de fala identificada: ${average_ppm} palavras por minuto (PPM).\n`;
+        contentForAnalysis += `Detalhes por vídeo:\n${video_details.join('\n')}\n`;
+      }
+      
+      contentForAnalysis += '\n';
     }
 
     // Add file information

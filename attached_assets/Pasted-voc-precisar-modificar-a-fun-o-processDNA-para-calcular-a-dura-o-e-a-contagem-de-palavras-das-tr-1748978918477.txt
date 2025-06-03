@@ -1,0 +1,69 @@
+você precisará modificar a função processDNA para calcular a duração e a contagem de palavras das transcrições de vídeo e passar essas informações para o prompt.
+
+Passos:
+
+Atualizar backend/prompts/AGENTE_CRIADOR_DNA.txt:
+
+Ação: Copie o prompt ATUALIZADO (versão 4.0) acima e cole-o no arquivo backend/prompts/AGENTE_CRIADOR_DNA.txt no seu Replit. Salve o arquivo.
+Modificar processDNA para Obter Duração e Contagem de Palavras:
+
+Localização: server/server.js (ou o arquivo onde processDNA está definido).
+Ação: Edite a função processDNA para:
+Ao processar youtube_links, obter a duração do vídeo (em minutos ou segundos) usando yt-dlp para metadados, ou a mesma API que faz a transcrição.
+Após obter a transcrição (texto), contar o número de palavras dessa transcrição.
+Calcular as Palavras Por Minuto (PPM) para cada vídeo e a média geral.
+Incluir essas métricas no contentForAnalysis que é enviado ao Agente Criador do DNA.
+TypeScript
+
+// server/server.js (trecho relevante dentro de processDNA)
+
+// ... (suas importações e definições de callGeminiChatModel) ...
+
+const processDNA = async ( /* ... seus args ... */ ) => {
+  try {
+    // ... (sua lógica de combinar texto para pastedTexts e filesData) ...
+
+    let total_video_duration_minutes = 0;
+    let total_video_words = 0;
+    let video_details = [];
+
+    // 3. Processar links do YouTube
+    for (const link of youtube_links) {
+        if (link) {
+            // **AQUI: LÓGICA REAL PARA TRANSCRIÇÃO E OBTENÇÃO DE DURAÇÃO**
+            // Isso exigirá uma API externa ou yt-dlp + pydub + STT
+            const transcription_data = await transcribe_youtube_video_and_get_duration(link); // <--- ASSUMIMOS ESSA NOVA FUNÇÃO
+            const transcription_text = transcription_data.text;
+            const video_duration = transcription_data.duration_minutes; // Em minutos
+
+            if (transcription_text) {
+                const word_count = transcription_text.split(/\s+/).length; // Contagem simples de palavras
+                total_video_words += word_count;
+                total_video_duration_minutes += video_duration;
+                video_details.push(`- Vídeo: ${link}, Duração: ${video_duration} min, Palavras: ${word_count}, PPM: ${word_count / video_duration}`);
+                combined_text += `\n\n[Transcrição de Vídeo <span class="math-inline">\{link\} \(</span>{video_duration} min)]:\n${transcription_text}`;
+            }
+        }
+    }
+
+    if (total_video_duration_minutes > 0) {
+        const average_ppm = (total_video_words / total_video_duration_minutes).toFixed(2);
+        combined_text += `\n\n--- MÉTRICAS GERAIS DE VÍDEOS DE PREGAÇÃO ---\n`;
+        combined_text += `Duração total dos vídeos analisados: ${total_video_duration_minutes.toFixed(2)} minutos.\n`;
+        combined_text += `Velocidade média de fala identificada: ${average_ppm} palavras por minuto (PPM).\n`;
+        combined_text += `Detalhes por vídeo:\n${video_details.join('\n')}\n`;
+    }
+    // ... (restante da sua lógica processDNA para construção do prompt e chamada do Gemini) ...
+  } catch (error) {
+      console.error('Erro no processamento do DNA:', error);
+      throw new Error('Falha ao processar DNA com IA');
+  }
+};
+
+// NOVA FUNÇÃO (coloque em utils/file_processing.py) que você precisará implementar
+// Assumimos que ela retorna { text: string, duration_minutes: number }
+// export async function transcribe_youtube_video_and_get_duration(youtube_url: string): Promise<{ text: string, duration_minutes: number }> {
+//    // Implementação real com yt-dlp, pydub e API de Speech-to-Text
+//    return { text: "Transcrição real do vídeo", duration_minutes: 10 }; // Retorno mock
+// }
+Ponto Crítico: A implementação da função transcribe_youtube_video_and_get_duration é complexa e fundamental para que essa métrica funcione. Se você ainda está usando mocks para transcrição, o Agente Criador do DNA não terá os dados de duração/contagem de palavras reais
