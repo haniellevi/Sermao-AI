@@ -1,0 +1,4 @@
+Sample content for enduringword_content.txt
+
+This is placeholder content. Replace with actual biblical commentary content.
+For production, download content from the respective websites and place here.
