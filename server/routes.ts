@@ -16,7 +16,7 @@ import {
   type User
 } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ChromaApi, OpenAIEmbeddingFunction } from 'chromadb';
+import { ChromaClient } from 'chromadb';
 import path from "path";
 
 // Configuration
@@ -353,7 +353,7 @@ Retorne APENAS o JSON, sem texto adicional antes ou depois.`;
 const retrieve_relevant_chunks = async (query_text: string, num_results: number = 3): Promise<string[]> => {
   try {
     // Initialize ChromaDB client
-    const chromaClient = new ChromaApi({
+    const chromaClient = new ChromaClient({
       path: path.join(process.cwd(), 'backend', 'data', 'chromadb')
     });
 
