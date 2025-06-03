@@ -68,6 +68,40 @@ export default function SermonResultPage() {
     }
   };
 
+  const handleExportPDF = async () => {
+    if (!sermonData) return;
+    try {
+      await exportToPDF(sermonData);
+      toast({
+        title: "PDF gerado!",
+        description: "O sermão foi exportado em PDF com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível exportar o sermão em PDF.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportDOCX = async () => {
+    if (!sermonData) return;
+    try {
+      await exportToDOCX(sermonData);
+      toast({
+        title: "DOCX gerado!",
+        description: "O sermão foi exportado em DOCX com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao gerar DOCX",
+        description: "Não foi possível exportar o sermão em DOCX.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -142,10 +176,18 @@ export default function SermonResultPage() {
                   <FileText className="w-6 h-6 mr-2" />
                   {sermonData.title}
                 </CardTitle>
-                <Button onClick={copyToClipboard} className="bg-primary hover:bg-primary/90">
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copiar Sermão
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={copyToClipboard} variant="outline">
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar
+                  </Button>
+                  <Button onClick={handleExportPDF} className="bg-primary hover:bg-primary/90">
+                    Baixar PDF
+                  </Button>
+                  <Button onClick={handleExportDOCX} variant="outline">
+                    Baixar DOCX
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
