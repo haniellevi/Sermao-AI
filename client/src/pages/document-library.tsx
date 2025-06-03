@@ -61,7 +61,7 @@ export default function DocumentLibrary() {
 
   // Clear documents mutation
   const clearMutation = useMutation({
-    mutationFn: () => apiRequest("/api/rag/documents", { method: "DELETE" }),
+    mutationFn: () => apiRequest("/api/rag/documents", "DELETE"),
     onSuccess: (data) => {
       toast({
         title: "Sucesso",

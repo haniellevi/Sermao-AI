@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar } from "lucide-react";
+import { Dna, Wand2, Clock, FileText, CheckCircle, Calendar, BookOpen } from "lucide-react";
 import { useAuthContext } from "@/lib/auth";
 
 export default function DashboardPage() {
@@ -81,6 +81,28 @@ export default function DashboardPage() {
                 <p className="text-gray-600 text-sm mb-4">Crie sermões personalizados com IA</p>
                 <div className="flex items-center text-primary text-sm font-medium group-hover:text-primary/80">
                   <span>Começar agora</span>
+                  <div className="ml-2 transform group-hover:translate-x-1 transition-transform">→</div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Document Library Card */}
+          <Link href="/document-library">
+            <Card className="shadow-lg hover:shadow-xl transition-all cursor-pointer group">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-blue-100 rounded-full p-3 group-hover:bg-blue-200 transition-colors">
+                    <BookOpen className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                    Biblioteca
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Documentos Teológicos</h3>
+                <p className="text-gray-600 text-sm mb-4">Enriqueça sermões com seus documentos</p>
+                <div className="flex items-center text-blue-600 text-sm font-medium group-hover:text-blue-500">
+                  <span>Gerenciar biblioteca</span>
                   <div className="ml-2 transform group-hover:translate-x-1 transition-transform">→</div>
                 </div>
               </CardContent>
