@@ -247,12 +247,12 @@ export default function SermonResultPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {sermonContent.sugestoes_enriquecimento.map((sugestao: string, index: number) => (
+                  {sermonContent.sugestoes_enriquecimento.map((sugestao: any, index: number) => (
                     <li key={index} className="flex items-start">
                       <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">
                         {index + 1}
                       </span>
-                      <span className="text-gray-700">{sugestao}</span>
+                      <span className="text-gray-700">{String(sugestao)}</span>
                     </li>
                   ))}
                 </ul>
@@ -270,7 +270,20 @@ export default function SermonResultPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed">{sermonContent.avaliacao_qualidade}</p>
+                <div className="text-gray-700 leading-relaxed">
+                  {typeof sermonContent.avaliacao_qualidade === 'object' ? (
+                    <div>
+                      <div className="mb-2">
+                        <strong>Nota:</strong> {sermonContent.avaliacao_qualidade.nota}/10
+                      </div>
+                      <div>
+                        <strong>Justificativa:</strong> {sermonContent.avaliacao_qualidade.justificativa}
+                      </div>
+                    </div>
+                  ) : (
+                    <p>{String(sermonContent.avaliacao_qualidade)}</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
