@@ -116,8 +116,15 @@ export default function SermonResultPage() {
 
   const deleteSermonMutation = useMutation({
     mutationFn: async (sermonId: string) => {
+      // Espera um momento para garantir que o token foi atualizado após login
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const token = localStorage.getItem('token');
-      console.log('Token being used for deletion:', token ? 'Token exists' : 'No token found');
+      console.log('Token being used for deletion:', {
+        exists: !!token,
+        length: token?.length || 0,
+        preview: token ? token.substring(0, 20) + '...' : 'No token'
+      });
       
       if (!token) {
         throw new Error('Token de acesso necessário');
